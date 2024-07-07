@@ -97,6 +97,29 @@
   -->
 
   {{ template "lettr-form" . }}
-  <div class="my-10 text-center text-gray-200 dark:text-gray-700">Rev: <a href="https://github.com/pandorasNox/lettr/commit/{{ printf "%s" .Revision }}" target="_blank">{{ printf "%s" .Revision }}</a></div>
+
+  <footer class="bg-white rounded-lg shadow dark:bg-gray-900 m-4 mt-8">
+
+
+      <p class="text-center font-semibold text-3xl">lettr's making words!</p>
+
+      <div class="w-full max-w-screen-xl mx-auto p-4 md:py-8">
+          <div class="flex justify-center items-center">
+              <button type="button" class="text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-full text-sm text-center inline-flex items-center px-5 py-2.5 mb-2 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700">
+                  <svg class="w-4 h-4 me-2 dark:fill-white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+                      <!--!Font Awesome Free 6.5.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2024 Fonticons, Inc.-->
+                      <path d="M215.4 96H144 107.8 96v8.8V144v40.4 89L.2 202.5c1.6-18.1 10.9-34.9 25.7-45.8L48 140.3V96c0-26.5 21.5-48 48-48h76.6l49.9-36.9C232.2 3.9 243.9 0 256 0s23.8 3.9 33.5 11L339.4 48H416c26.5 0 48 21.5 48 48v44.3l22.1 16.4c14.8 10.9 24.1 27.7 25.7 45.8L416 273.4v-89V144 104.8 96H404.2 368 296.6 215.4zM0 448V242.1L217.6 403.3c11.1 8.2 24.6 12.7 38.4 12.7s27.3-4.4 38.4-12.7L512 242.1V448v0c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64v0zM176 160H336c8.8 0 16 7.2 16 16s-7.2 16-16 16H176c-8.8 0-16-7.2-16-16s7.2-16 16-16zm0 64H336c8.8 0 16 7.2 16 16s-7.2 16-16 16H176c-8.8 0-16-7.2-16-16s7.2-16 16-16z"/>
+                  </svg>
+                  <span>Suggest a word</span>
+              </button>
+          </div>
+
+          <hr class="my-6 border-gray-200 sm:mx-auto dark:border-gray-700 lg:my-8" />
+
+          <span class="block text-sm text-gray-500 text-center dark:text-gray-400">Made with HTMX</span>
+          <div class="my-10 text-center text-gray-200 dark:text-gray-700">Rev: <a href="https://github.com/pandorasNox/lettr/commit/{{ printf "%s" .Revision }}" target="_blank">{{ printf "%s" .Revision }}</a></div>
+      </div>
+  </footer>
+
 </body>
 </html>
