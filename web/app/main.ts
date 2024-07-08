@@ -26,6 +26,23 @@ interface CustomHtmxEvent<T = any> extends Event {
             initKeyListener(state);
             document.addEventListener('htmx:afterSettle', (event: CustomHtmxEvent) => {reset(state, event)}, false);
             document.addEventListener('htmx:afterSettle', (event: CustomHtmxEvent) => {onErrorMsg(event)}, false);
+            document.addEventListener('htmx:afterSettle', (event: CustomHtmxEvent) => {onMessages(event)}, false);
+
+
+
+            document.body.addEventListener('htmx:beforeSwap', function(evt: CustomHtmxEvent) {
+                if (evt.detail.xhr.status === 422) {
+                    console.log(evt);
+                    // allow 422 responses to swap as we are using this as a signal that
+                    // a form was submitted with bad data and want to rerender with the
+                    // errors
+                    //
+                    // set isError to false to avoid error logging in console
+                    evt.detail.shouldSwap = true;
+                    evt.detail.isError = true;
+                    //evt.detail.target = "messages";
+                }
+            });
         }, false);
 
         // document.body.addEventListener('htmx:load', function(evt) {
@@ -57,6 +74,22 @@ interface CustomHtmxEvent<T = any> extends Event {
             errorsElem.innerHTML = "";
             clearInterval(intervalID);
         }, 2000);
+    }
+
+    function onMessages(event: CustomHtmxEvent): void {
+        const msgsContainer = document.getElementById('messages');
+        if (msgsContainer === null) {
+            return
+        }
+
+        const intervalID = setInterval(function() {
+            msgsContainer.innerHTML = '';
+            msgsContainer.classList.remove("*:opacity-100");
+            msgsContainer.classList.remove("*:translate-y-0");
+            msgsContainer.classList.add("*:opacity-0");
+            msgsContainer.classList.add("*:-translate-y-36");
+            clearInterval(intervalID);
+        }, 5000);
     }
 
     function initalThemeHandler() {

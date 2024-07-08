@@ -2,12 +2,14 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"embed"
 	"errors"
 	"fmt"
 	"html/template"
 	"io"
 	"math/rand"
+	"regexp"
 	"strings"
 	"sync"
 	"unicode"
@@ -22,6 +24,8 @@ import (
 	"unicode/utf8"
 
 	"github.com/google/uuid"
+	"github.com/microcosm-cc/bluemonday"
+	"github.com/pandorasNox/lettr/pkg/github"
 	"github.com/pandorasNox/lettr/pkg/middleware"
 )
 
@@ -41,11 +45,12 @@ var fs embed.FS
 var ErrNotInWordList = errors.New("not in wordlist")
 
 type env struct {
-	port string
+	port        string
+	githubToken string
 }
 
 func (e env) String() string {
-	s := fmt.Sprintf("port: %s\n", e.port)
+	s := fmt.Sprintf("port: %s\ngithub token (length): %d\n", e.port, len(e.githubToken))
 	// s = s + fmt.Sprintf("foo: %s\n", e.port)
 	return s
 }
@@ -299,7 +304,7 @@ const (
 	MatchExact
 )
 
-type FormData struct {
+type TemplateDataForm struct {
 	Data                        puzzle
 	Errors                      map[string]string
 	IsSolved                    bool
@@ -313,11 +318,11 @@ type FormData struct {
 	SolutionHasDublicateLetters bool
 }
 
-func (fd FormData) New(l language, p puzzle, pastWords []word, SolutionHasDublicateLetters bool) FormData {
+func (fd TemplateDataForm) New(l language, p puzzle, pastWords []word, SolutionHasDublicateLetters bool) TemplateDataForm {
 	kb := keyboard{}
 	kb.Init(l, p.letterGuesses())
 
-	return FormData{
+	return TemplateDataForm{
 		Data:                        p,
 		Errors:                      make(map[string]string),
 		JSCachePurgeTimestamp:       time.Now().Unix(),
@@ -328,6 +333,37 @@ func (fd FormData) New(l language, p puzzle, pastWords []word, SolutionHasDublic
 		PastWords:                   pastWords,
 		SolutionHasDublicateLetters: SolutionHasDublicateLetters,
 	}
+}
+
+type TemplateDataSuggest struct {
+	Word     string
+	Message  string
+	Language string
+	Action   string
+}
+
+var RegexpAllowedWordCharacters = regexp.MustCompile(`^[A-Za-zöäüÖÄÜß]{5}$`)
+
+func (tds TemplateDataSuggest) validate() error {
+	if !RegexpAllowedWordCharacters.Match([]byte(tds.Word)) {
+		return fmt.Errorf("validation failed: %s", "word is either to long, to short or contains forbidden characters")
+	}
+
+	p := bluemonday.UGCPolicy()
+	sm := p.Sanitize(tds.Message)
+	if sm != tds.Message {
+		return fmt.Errorf("validation failed: %s", "message contains invalid data")
+	}
+
+	if !slices.Contains([]string{"add", "remove"}, tds.Action) {
+		return fmt.Errorf("validation failed: %s", "action invalid")
+	}
+
+	if tds.Language != "german" && tds.Language != "english" {
+		return fmt.Errorf("validation failed: %s", "language invalid")
+	}
+
+	return nil
 }
 
 type wordCollection string
@@ -511,6 +547,14 @@ type keyboardKey struct {
 	Match  match
 }
 
+type Message string
+
+type TemplateDataMessages struct {
+	ErrMsgs     []Message
+	InfoMsgs    []Message
+	SuccessMsgs []Message
+}
+
 func Map[T, U any](ts []T, f func(T) U) []U {
 	us := make([]U, len(ts))
 	for i := range ts {
@@ -579,6 +623,7 @@ func main() {
 		"templates/index.html.tmpl",
 		"templates/lettr-form.html.tmpl",
 		"templates/help.html.tmpl",
+		"templates/suggest.html.tmpl",
 	))
 
 	mux := http.NewServeMux()
@@ -601,7 +646,7 @@ func main() {
 		p.Debug = sess.activeSolutionWord.String()
 		sessions.updateOrSet(sess)
 
-		fData := FormData{}.New(sess.language, p, sess.PastWords(), sess.activeSolutionWord.hasDublicateLetters())
+		fData := TemplateDataForm{}.New(sess.language, p, sess.PastWords(), sess.activeSolutionWord.hasDublicateLetters())
 		fData.IsSolved = p.isSolved()
 		fData.IsLoose = p.isLoose()
 
@@ -620,7 +665,7 @@ func main() {
 
 		p.Debug = s.activeSolutionWord.String()
 
-		fData := FormData{}.New(s.language, p, s.PastWords(), s.activeSolutionWord.hasDublicateLetters())
+		fData := TemplateDataForm{}.New(s.language, p, s.PastWords(), s.activeSolutionWord.hasDublicateLetters())
 		fData.IsSolved = p.isSolved()
 		fData.IsLoose = p.isLoose()
 
@@ -642,8 +687,16 @@ func main() {
 
 		err := r.ParseForm()
 		if err != nil {
-			// log.Fatalln(err)
 			log.Printf("error: %s", err)
+
+			w.WriteHeader(422)
+			err = t.ExecuteTemplate(w, "oob-messages", TemplateDataMessages{
+				ErrMsgs: []Message{"cannot parse form data"},
+			})
+			if err != nil {
+				log.Printf("error t.ExecuteTemplate 'oob-messages': %s", err)
+			}
+			return
 		}
 
 		p := s.lastEvaluatedAttempt
@@ -657,21 +710,31 @@ func main() {
 		// log.Printf("debug '/lettr' route - row compare: activeRow='%d' / formRowCount='%d' \n", s.lastEvaluatedAttempt.activeRow(), countFilledFormRows(r.PostForm))
 		if s.lastEvaluatedAttempt.activeRow() != countFilledFormRows(r.PostForm)-1 {
 			w.WriteHeader(422)
-			w.Write([]byte("faked rows"))
+			err = t.ExecuteTemplate(w, "oob-messages", TemplateDataMessages{
+				ErrMsgs: []Message{"faked rows"},
+			})
+			if err != nil {
+				log.Printf("error t.ExecuteTemplate 'oob-messages': %s", err)
+			}
 			return
 		}
 
 		p, err = parseForm(p, r.PostForm, s.activeSolutionWord, s.language, wordDb)
 		if err == ErrNotInWordList {
 			w.WriteHeader(422)
-			w.Write([]byte("word not in word list"))
+			err = t.ExecuteTemplate(w, "oob-messages", TemplateDataMessages{
+				ErrMsgs: []Message{"word not in word list"},
+			})
+			if err != nil {
+				log.Printf("error t.ExecuteTemplate 'oob-messages': %s", err)
+			}
 			return
 		}
 
 		s.lastEvaluatedAttempt = p
 		sessions.updateOrSet(s)
 
-		fData := FormData{}.New(s.language, p, s.PastWords(), s.activeSolutionWord.hasDublicateLetters())
+		fData := TemplateDataForm{}.New(s.language, p, s.PastWords(), s.activeSolutionWord.hasDublicateLetters())
 		fData.IsSolved = p.isSolved()
 		fData.IsLoose = p.isLoose()
 
@@ -691,13 +754,12 @@ func main() {
 			l, _ = NewLang(maybeLang)
 			s.language = l
 
-			data := struct {
+			type TemplateDataLanguge struct {
 				Language language
-			}{
-				Language: l,
 			}
+			tData := TemplateDataLanguge{Language: l}
 
-			err := t.ExecuteTemplate(w, "oob-lang-switch", data)
+			err := t.ExecuteTemplate(w, "oob-lang-switch", tData)
 			if err != nil {
 				log.Printf("error t.ExecuteTemplate '/new' route: %s", err)
 			}
@@ -712,7 +774,7 @@ func main() {
 
 		p.Debug = s.activeSolutionWord.String()
 
-		fData := FormData{}.New(s.language, p, s.PastWords(), s.activeSolutionWord.hasDublicateLetters())
+		fData := TemplateDataForm{}.New(s.language, p, s.PastWords(), s.activeSolutionWord.hasDublicateLetters())
 		fData.IsSolved = p.isSolved()
 		fData.IsLoose = p.isLoose()
 
@@ -732,13 +794,97 @@ func main() {
 
 		p.Debug = s.activeSolutionWord.String()
 
-		fData := FormData{}.New(s.language, p, s.PastWords(), s.activeSolutionWord.hasDublicateLetters())
+		fData := TemplateDataForm{}.New(s.language, p, s.PastWords(), s.activeSolutionWord.hasDublicateLetters())
 		fData.IsSolved = p.isSolved()
 		fData.IsLoose = p.isLoose()
 
 		err := t.ExecuteTemplate(w, "help", fData)
 		if err != nil {
 			log.Printf("error t.ExecuteTemplate '/help' route: %s", err)
+		}
+	})
+
+	mux.HandleFunc("GET /suggest", func(w http.ResponseWriter, r *http.Request) {
+		err := t.ExecuteTemplate(w, "suggest", TemplateDataSuggest{})
+		if err != nil {
+			log.Printf("error t.ExecuteTemplate '/suggest' route: %s", err)
+		}
+	})
+
+	mux.HandleFunc("POST /suggest", func(w http.ResponseWriter, r *http.Request) {
+		var tdm TemplateDataMessages
+
+		err := r.ParseForm()
+		if err != nil {
+			log.Printf("error: %s", err)
+
+			w.WriteHeader(422)
+			err = t.ExecuteTemplate(w, "oob-messages", TemplateDataMessages{
+				ErrMsgs: []Message{"can not parse form data"},
+			})
+			if err != nil {
+				log.Printf("error t.ExecuteTemplate 'oob-messages': %s", err)
+			}
+			return
+		}
+
+		form := r.PostForm
+		tds := TemplateDataSuggest{
+			Word:     form["word"][0],
+			Message:  form["message"][0],
+			Language: form["language-pick"][0],
+			Action:   form["suggest-action"][0],
+		}
+
+		err = tds.validate()
+		if err != nil {
+			w.WriteHeader(422)
+			w.Header().Add("HX-Reswap", "none")
+
+			tdm = TemplateDataMessages{
+				ErrMsgs: []Message{Message(err.Error())},
+			}
+
+			err = t.ExecuteTemplate(w, "oob-messages", tdm)
+			if err != nil {
+				log.Printf("error t.ExecuteTemplate 'oob-messages' route: %s", err)
+			}
+
+			return
+		}
+
+		title := fmt.Sprintf("new word suggestion: '%s'", tds.Word)
+		body := formatSuggestionBody(tds.Word, tds.Language, tds.Action, tds.Message)
+
+		ir := github.IssueRequest{Title: &title, Body: &body}
+		err = github.CreateIssue(context.Background(), envCfg.githubToken, ir)
+		if err != nil {
+			w.WriteHeader(422)
+			w.Header().Add("HX-Reswap", "none")
+
+			tdm = TemplateDataMessages{
+				ErrMsgs: []Message{"Could not send suggestion."},
+			}
+
+			err = t.ExecuteTemplate(w, "oob-messages", tdm)
+			if err != nil {
+				log.Printf("error t.ExecuteTemplate 'oob-messages' route: %s", err)
+			}
+
+			return
+		}
+
+		tdm = TemplateDataMessages{
+			SuccessMsgs: []Message{"Suggestion send, thank you!"},
+		}
+		err = t.ExecuteTemplate(w, "oob-messages", tdm)
+		if err != nil {
+			log.Printf("error t.ExecuteTemplate 'oob-messages' route: %s", err)
+		}
+
+		err = t.ExecuteTemplate(w, "suggest", TemplateDataSuggest{})
+		if err != nil {
+			log.Printf("error t.ExecuteTemplate '/suggest' route: %s", err)
 		}
 	})
 
@@ -774,6 +920,9 @@ func main() {
 		muxWithMiddlewares = fm(muxWithMiddlewares)
 	}
 
+	// v1 := http.NewServeMux()
+	// v1.Handle("/v1/", http.StripPrefix("/v1", muxWithMiddlewares))
+
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", envCfg.port), muxWithMiddlewares))
 }
 
@@ -783,7 +932,12 @@ func envConfig() env {
 		panic("PORT not provided")
 	}
 
-	return env{port}
+	gt, ok := os.LookupEnv("GITHUB_TOKEN")
+	if !ok {
+		panic("GITHUB_TOKEN not provided")
+	}
+
+	return env{port: port, githubToken: gt}
 }
 
 func handleSession(w http.ResponseWriter, req *http.Request, sessions *sessions, wdb wordDatabase) session {
@@ -956,4 +1110,17 @@ func evaluateGuessedWord(guessedWord word, solutionWord word) wordGuess {
 	}
 
 	return resultWordGuess
+}
+
+func formatSuggestionBody(word, language, action, message string) string {
+	return fmt.Sprintf(`
+There is a new suggestion reported on the lettr website.
+
+word: '%s'
+language: %s
+action: %s
+message:
+%s
+
+`, word, language, action, message)
 }

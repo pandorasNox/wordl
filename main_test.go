@@ -378,3 +378,43 @@ func Test_sessions_updateOrSet(t *testing.T) {
 // todo: test for ???:
 //   files, err := getAllFilenames(staticFS)
 //   log.Printf("  debug fsys:\n    %v\n    %s\n", files, err)
+
+func TestTemplateDataSuggest_validate(t *testing.T) {
+	type fields struct {
+		Word string
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		wantErr bool
+	}{
+		{name: "Suggested word match", fields: fields{Word: "gamer"}, wantErr: false},
+		{name: "Suggested word match", fields: fields{Word: "GAMER"}, wantErr: false},
+		{name: "Suggested word match", fields: fields{Word: "preuß"}, wantErr: false},
+		{name: "Suggested word match", fields: fields{Word: "höste"}, wantErr: false},
+		{name: "Suggested word match", fields: fields{Word: "hÖste"}, wantErr: false},
+		{name: "Suggested word match", fields: fields{Word: "HÖSTE"}, wantErr: false},
+		{name: "Suggested word match", fields: fields{Word: "fülle"}, wantErr: false},
+		{name: "Suggested word match", fields: fields{Word: "FÜLLE"}, wantErr: false},
+		{name: "Suggested word match", fields: fields{Word: "größe"}, wantErr: false},
+		{name: "Suggested word match", fields: fields{Word: "GRÖßE"}, wantErr: false},
+
+		{name: "Suggested word invalid (special chars: ?)", fields: fields{Word: "?????"}, wantErr: true},
+		{name: "Suggested word invalid (special chars: ô)", fields: fields{Word: "grôss"}, wantErr: true},
+		{name: "Suggested word invalid (special chars: emoji's (😁))", fields: fields{Word: "😁,😁,😁"}, wantErr: true},
+		{name: "Suggested word invalid (word to short en)", fields: fields{Word: "tiny"}, wantErr: true},
+		{name: "Suggested word invalid (word to short de)", fields: fields{Word: "kurz"}, wantErr: true},
+		{name: "Suggested word invalid (word to long en)", fields: fields{Word: "toolong"}, wantErr: true},
+		{name: "Suggested word invalid (word to long de)", fields: fields{Word: "zulang"}, wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tds := TemplateDataSuggest{
+				Word: tt.fields.Word,
+			}
+			if err := tds.validate(); (err != nil) != tt.wantErr {
+				t.Errorf("TemplateDataSuggest.validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
