@@ -58,3 +58,4 @@
         * [ ] 414 URI Too Long
         * [ ] 431 Request Header Fields Too Large (RFC 6585)
     * [ ] improve VS Code dev container
+    * [ ] htmx routing ? (keep nav + footer but change body + change url)
