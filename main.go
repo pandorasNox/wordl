@@ -27,6 +27,7 @@ import (
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/pandorasNox/lettr/pkg/github"
 	"github.com/pandorasNox/lettr/pkg/middleware"
+	"github.com/pandorasNox/lettr/pkg/routes"
 )
 
 var Revision = "0000000"
@@ -37,6 +38,7 @@ const SESSION_MAX_AGE_IN_SECONDS = 24 * 60 * 60
 
 //go:embed configs/*.txt
 //go:embed templates/*.html.tmpl
+//go:embed templates/**/*.html.tmpl
 //go:embed web/static/assets/*
 //go:embed web/static/generated/*.js
 //go:embed web/static/generated/*.css
@@ -624,6 +626,7 @@ func main() {
 		"templates/lettr-form.html.tmpl",
 		"templates/help.html.tmpl",
 		"templates/suggest.html.tmpl",
+		"templates/pages/test.html.tmpl",
 	))
 
 	mux := http.NewServeMux()
@@ -655,6 +658,8 @@ func main() {
 			log.Printf("error t.Execute '/' route: %s", err)
 		}
 	})
+
+	mux.HandleFunc("GET /test", routes.TestPage(t))
 
 	mux.HandleFunc("GET /lettr", func(w http.ResponseWriter, r *http.Request) {
 		s := handleSession(w, r, &sessions, wordDb)
