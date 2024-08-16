@@ -30,8 +30,11 @@
     * [x] bugfix: full page get form submit request on random occations when it should just be a htmx post
     * [x] avoid same word twice (words to exclude (previous taken quizes))
     * [ ] editorial work: e.g. words like games or gamer are missing + maybe we introduce a common vs uncommen word list
-        * [ ] word suggestion (button to save (unknown) word eg. in LiteFS/email/github-issue/something)
+        * [x] word suggestion (button to save (unknown) word eg. in LiteFS/email/github-issue/something)
             * [ ] form spam protection mechanism
+                * [ ] easy honeypot (html form fields)
+                * [ ] captcha: https://github.com/altcha-org/altcha
+                * [ ] other (research task)?
         * [x] corpora dataset export https://corpora.uni-leipzig.de/en/res?corpusId=eng_news_2023&word=would
             * https://github.com/Leipzig-Corpora-Collection
         * https://api.wortschatz-leipzig.de/ws/swagger-ui/index.html#/Words/getWordInformation
