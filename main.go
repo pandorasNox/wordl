@@ -858,11 +858,9 @@ func main() {
 			return
 		}
 
-		title := fmt.Sprintf("new word suggestion: '%s'", tds.Word)
-		body := formatSuggestionBody(tds.Word, tds.Language, tds.Action, tds.Message)
-
-		ir := github.IssueRequest{Title: &title, Body: &body}
-		err = github.CreateIssue(context.Background(), envCfg.githubToken, ir)
+		err = github.CreateWordSuggestionIssue(
+			context.Background(), envCfg.githubToken, tds.Word, tds.Language, tds.Action, tds.Message,
+		)
 		if err != nil {
 			w.WriteHeader(422)
 			w.Header().Add("HX-Reswap", "none")
@@ -1115,17 +1113,4 @@ func evaluateGuessedWord(guessedWord word, solutionWord word) wordGuess {
 	}
 
 	return resultWordGuess
-}
-
-func formatSuggestionBody(word, language, action, message string) string {
-	return fmt.Sprintf(`
-There is a new suggestion reported on the lettr website.
-
-word: '%s'
-language: %s
-action: %s
-message:
-%s
-
-`, word, language, action, message)
 }
