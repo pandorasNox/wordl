@@ -1,7 +1,7 @@
 FROM node:20.12.1-alpine3.19 AS node
 
 
-FROM golang:1.22-alpine AS builder-and-dev
+FROM golang:1.22.6-alpine AS builder-and-dev
 
 ARG GIT_REVISION=${GIT_REVISION}
 ENV GIT_REVISION=${GIT_REVISION}
