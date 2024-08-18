@@ -27,6 +27,7 @@ import (
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/pandorasNox/lettr/pkg/github"
 	"github.com/pandorasNox/lettr/pkg/middleware"
+	"github.com/pandorasNox/lettr/pkg/puzzle"
 	"github.com/pandorasNox/lettr/pkg/routes"
 )
 
@@ -68,16 +69,16 @@ type session struct {
 	expiresAt            time.Time
 	maxAgeSeconds        int
 	language             language
-	activeSolutionWord   word
-	lastEvaluatedAttempt puzzle
-	pastWords            []word
+	activeSolutionWord   puzzle.Word
+	lastEvaluatedAttempt puzzle.Puzzle
+	pastWords            []puzzle.Word
 }
 
-func (s *session) AddPastWord(w word) {
+func (s *session) AddPastWord(w puzzle.Word) {
 	s.pastWords = append(s.pastWords, w)
 }
 
-func (s *session) PastWords() []word {
+func (s *session) PastWords() []puzzle.Word {
 	return slices.Clone(s.pastWords)
 }
 
@@ -120,194 +121,35 @@ const (
 	LANG_DE language = "de"
 )
 
-type word [5]rune
-
-func (w word) String() string {
-	out := ""
-	for _, v := range w {
-		out += string(v)
-	}
-
-	return out
-}
-
-func (w word) contains(letter rune) bool {
-	found := false
-	for _, v := range w {
-		if v == letter {
-			found = true
-			break
-		}
-	}
-
-	return found
-}
-
-func (w word) count(letter rune) int {
-	count := 0
-	for _, v := range w {
-		if v == letter {
-			count++
-		}
-	}
-
-	return count
-}
-
-func (w word) isEqual(compare word) bool {
-	for i, v := range w {
-		if v != compare[i] {
-			return false
-		}
-	}
-
-	return true
-}
-
-func (w word) hasDublicateLetters() bool {
-	for _, l := range w {
-		if w.count(l) >= 2 {
-			return true
-		}
-	}
-
-	return false
-}
-
-func (w word) ToLower() word {
-	for i, v := range w {
-		w[i] = unicode.ToLower(v)
-	}
-
-	return w
-}
-
-func toWord(wo string) (word, error) {
-	out := word{}
+func toWord(wo string) (puzzle.Word, error) {
+	out := puzzle.Word{}
 
 	length := 0
 	for i, l := range wo {
 		length++
 		if length > len(out) {
-			return word{}, fmt.Errorf("string does not match allowed word length: length=%d, expectedLength=%d", length, len(out))
+			return puzzle.Word{}, fmt.Errorf("string does not match allowed word length: length=%d, expectedLength=%d", length, len(out))
 		}
 
 		out[i] = l
 	}
 
 	if length < len(out) {
-		return word{}, fmt.Errorf("string is to short: length=%d, expectedLength=%d", length, len(out))
+		return puzzle.Word{}, fmt.Errorf("string is to short: length=%d, expectedLength=%d", length, len(out))
 	}
 
 	return out, nil
 }
 
-type puzzle struct {
-	Debug   string
-	Guesses [6]wordGuess
-}
-
-func (p puzzle) activeRow() uint8 {
-	for i, wg := range p.Guesses {
-		if !wg.isFilled() {
-			return uint8(i)
-		}
-	}
-
-	return uint8(len(p.Guesses))
-}
-
-func (p puzzle) isSolved() bool {
-	if p.activeRow() > 0 {
-		return p.Guesses[p.activeRow()-1].isSolved()
-	}
-
-	return false
-}
-
-func (p puzzle) isLoose() bool {
-	for _, wg := range p.Guesses {
-		if !wg.isFilled() || wg.isSolved() {
-			return false
-		}
-	}
-
-	return true
-}
-
-func (p puzzle) letterGuesses() []letterGuess {
-	lgCollector := []letterGuess{}
-
-	for _, wg := range p.Guesses {
-		if wg.isFilled() {
-			lgCollector = append(lgCollector, wg.letterGuesses()...)
-		}
-	}
-
-	return lgCollector
-}
-
-type wordGuess [5]letterGuess
-
-func (wg wordGuess) isFilled() bool {
-	for _, l := range wg {
-		if l.Letter == 0 || l.Letter == 65533 {
-			return false
-		}
-	}
-
-	return true
-}
-
-func (wg wordGuess) isSolved() bool {
-	for _, lg := range wg {
-		if lg.Match != MatchExact {
-			return false
-		}
-	}
-
-	return true
-}
-
-func (wg wordGuess) letterGuesses() []letterGuess {
-	s := []letterGuess{}
-
-	if !wg.isFilled() {
-		return s
-	}
-
-	for _, lg := range wg {
-		s = append(s, lg)
-	}
-
-	return s
-}
-
-type letterGuess struct {
-	Letter rune
-	Match  match
-}
-
-type match uint
-
-// inspiration see: https://forum.golangbridge.org/t/can-i-use-enum-in-template/25296
-func (m match) is(mIn match) bool { return m == mIn }
-
 // inspiration see: https://forum.golangbridge.org/t/can-i-use-enum-in-template/25296
 var funcMap = template.FuncMap{
-	"IsMatchVague": MatchVague.is,
-	"IsMatchNone":  MatchNone.is,
-	"IsMatchExact": MatchExact.is,
+	"IsMatchVague": puzzle.MatchVague.Is,
+	"IsMatchNone":  puzzle.MatchNone.Is,
+	"IsMatchExact": puzzle.MatchExact.Is,
 }
 
-const (
-	MatchNone match = iota + 1
-	MatchVague
-	MatchExact
-)
-
 type TemplateDataForm struct {
-	Data                        puzzle
+	Data                        puzzle.Puzzle
 	Errors                      map[string]string
 	IsSolved                    bool
 	IsLoose                     bool
@@ -316,13 +158,13 @@ type TemplateDataForm struct {
 	Revision                    string
 	FaviconPath                 string
 	Keyboard                    keyboard
-	PastWords                   []word
+	PastWords                   []puzzle.Word
 	SolutionHasDublicateLetters bool
 }
 
-func (fd TemplateDataForm) New(l language, p puzzle, pastWords []word, SolutionHasDublicateLetters bool) TemplateDataForm {
+func (fd TemplateDataForm) New(l language, p puzzle.Puzzle, pastWords []puzzle.Word, SolutionHasDublicateLetters bool) TemplateDataForm {
 	kb := keyboard{}
-	kb.Init(l, p.letterGuesses())
+	kb.Init(l, p.LetterGuesses())
 
 	return TemplateDataForm{
 		Data:                        p,
@@ -376,16 +218,16 @@ const (
 )
 
 type wordDatabase struct {
-	db map[language]map[wordCollection]map[word]bool
+	db map[language]map[wordCollection]map[puzzle.Word]bool
 }
 
 func (wdb *wordDatabase) Init(fs iofs.FS, filePathsByLanguage map[language]map[wordCollection][]string) error {
-	wdb.db = make(map[language]map[wordCollection]map[word]bool)
+	wdb.db = make(map[language]map[wordCollection]map[puzzle.Word]bool)
 
 	for l, collection := range filePathsByLanguage {
-		wdb.db[l] = make(map[wordCollection]map[word]bool)
+		wdb.db[l] = make(map[wordCollection]map[puzzle.Word]bool)
 		for c, paths := range collection {
-			wdb.db[l][c] = make(map[word]bool)
+			wdb.db[l][c] = make(map[puzzle.Word]bool)
 
 			for _, path := range paths {
 				f, err := fs.Open(path)
@@ -432,7 +274,7 @@ func (wdb *wordDatabase) Init(fs iofs.FS, filePathsByLanguage map[language]map[w
 	return nil
 }
 
-func (wdb wordDatabase) Exists(l language, w word) bool {
+func (wdb wordDatabase) Exists(l language, w puzzle.Word) bool {
 	db, ok := wdb.db[l]
 	if !ok {
 		return false
@@ -447,16 +289,16 @@ func (wdb wordDatabase) Exists(l language, w word) bool {
 	return ok
 }
 
-func (wdb wordDatabase) RandomPick(l language, avoidList []word, retryAkkumulator uint8) (word, error) {
+func (wdb wordDatabase) RandomPick(l language, avoidList []puzzle.Word, retryAkkumulator uint8) (puzzle.Word, error) {
 	const MAX_RETRY uint8 = 10
 
 	if retryAkkumulator > MAX_RETRY {
-		return word{}, fmt.Errorf("RandomPick exceeded retries: retryAkkumulator='%d' | MAX_RETRY='%d'", retryAkkumulator, MAX_RETRY)
+		return puzzle.Word{}, fmt.Errorf("RandomPick exceeded retries: retryAkkumulator='%d' | MAX_RETRY='%d'", retryAkkumulator, MAX_RETRY)
 	}
 
 	db, ok := wdb.db[l]
 	if !ok {
-		return word{}, fmt.Errorf("RandomPick failed with unknown language: '%s'", l)
+		return puzzle.Word{}, fmt.Errorf("RandomPick failed with unknown language: '%s'", l)
 	}
 
 	collection := WC_COMMON
@@ -466,7 +308,7 @@ func (wdb wordDatabase) RandomPick(l language, avoidList []word, retryAkkumulato
 
 		db_c, ok = db[collection]
 		if !ok {
-			return word{}, fmt.Errorf("RandomPick with lang '%s' failed with unknown collection: '%s'", l, collection)
+			return puzzle.Word{}, fmt.Errorf("RandomPick with lang '%s' failed with unknown collection: '%s'", l, collection)
 		}
 	}
 
@@ -478,8 +320,8 @@ func (wdb wordDatabase) RandomPick(l language, avoidList []word, retryAkkumulato
 	for w := range db_c {
 		if currentLine == rolledLine {
 
-			wordContained := slices.ContainsFunc(avoidList, func(wo word) bool {
-				return w.isEqual(wo)
+			wordContained := slices.ContainsFunc(avoidList, func(wo puzzle.Word) bool {
+				return w.IsEqual(wo)
 			})
 			if wordContained {
 				return wdb.RandomPick(l, avoidList, retryAkkumulator+1)
@@ -491,13 +333,13 @@ func (wdb wordDatabase) RandomPick(l language, avoidList []word, retryAkkumulato
 		currentLine++
 	}
 
-	return word{}, fmt.Errorf("RandomPick could not find random line aka this should never happen ^^")
+	return puzzle.Word{}, fmt.Errorf("RandomPick could not find random line aka this should never happen ^^")
 }
 
-func (wdb wordDatabase) RandomPickWithFallback(l language, avoidList []word, retryAkkumulator uint8) word {
+func (wdb wordDatabase) RandomPickWithFallback(l language, avoidList []puzzle.Word, retryAkkumulator uint8) puzzle.Word {
 	w, err := wdb.RandomPick(l, avoidList, retryAkkumulator)
 	if err != nil {
-		return word{'R', 'O', 'A', 'T', 'E'}.ToLower()
+		return puzzle.Word{'R', 'O', 'A', 'T', 'E'}.ToLower()
 	}
 
 	return w.ToLower()
@@ -507,11 +349,11 @@ type keyboard struct {
 	KeyGrid [][]keyboardKey
 }
 
-func (k *keyboard) Init(l language, lgs []letterGuess) {
+func (k *keyboard) Init(l language, lgs []puzzle.LetterGuess) {
 	k.KeyGrid = [][]keyboardKey{
-		{{"Q", false, MatchNone}, {"W", false, MatchNone}, {"E", false, MatchNone}, {"R", false, MatchNone}, {"T", false, MatchNone}, {"Y", false, MatchNone}, {"U", false, MatchNone}, {"I", false, MatchNone}, {"O", false, MatchNone}, {"P", false, MatchNone}, {"Delete", false, MatchNone}},
-		{{"A", false, MatchNone}, {"S", false, MatchNone}, {"D", false, MatchNone}, {"F", false, MatchNone}, {"G", false, MatchNone}, {"H", false, MatchNone}, {"J", false, MatchNone}, {"K", false, MatchNone}, {"L", false, MatchNone}, {"Enter", false, MatchNone}},
-		{{"Z", false, MatchNone}, {"X", false, MatchNone}, {"C", false, MatchNone}, {"V", false, MatchNone}, {"B", false, MatchNone}, {"N", false, MatchNone}, {"M", false, MatchNone}},
+		{{"Q", false, puzzle.MatchNone}, {"W", false, puzzle.MatchNone}, {"E", false, puzzle.MatchNone}, {"R", false, puzzle.MatchNone}, {"T", false, puzzle.MatchNone}, {"Y", false, puzzle.MatchNone}, {"U", false, puzzle.MatchNone}, {"I", false, puzzle.MatchNone}, {"O", false, puzzle.MatchNone}, {"P", false, puzzle.MatchNone}, {"Delete", false, puzzle.MatchNone}},
+		{{"A", false, puzzle.MatchNone}, {"S", false, puzzle.MatchNone}, {"D", false, puzzle.MatchNone}, {"F", false, puzzle.MatchNone}, {"G", false, puzzle.MatchNone}, {"H", false, puzzle.MatchNone}, {"J", false, puzzle.MatchNone}, {"K", false, puzzle.MatchNone}, {"L", false, puzzle.MatchNone}, {"Enter", false, puzzle.MatchNone}},
+		{{"Z", false, puzzle.MatchNone}, {"X", false, puzzle.MatchNone}, {"C", false, puzzle.MatchNone}, {"V", false, puzzle.MatchNone}, {"B", false, puzzle.MatchNone}, {"N", false, puzzle.MatchNone}, {"M", false, puzzle.MatchNone}},
 	}
 
 	for ri, r := range k.KeyGrid {
@@ -523,8 +365,8 @@ func (k *keyboard) Init(l language, lgs []letterGuess) {
 				}
 
 				KeyR := firstRune(kk.Key)
-				betterMatch := (k.KeyGrid[ri][ki].Match == MatchNone) ||
-					(k.KeyGrid[ri][ki].Match == MatchVague && lg.Match == MatchExact)
+				betterMatch := (k.KeyGrid[ri][ki].Match == puzzle.MatchNone) ||
+					(k.KeyGrid[ri][ki].Match == puzzle.MatchVague && lg.Match == puzzle.MatchExact)
 
 				if lg.Letter == unicode.ToLower(KeyR) && betterMatch {
 					k.KeyGrid[ri][ki].IsUsed = true
@@ -546,7 +388,7 @@ func firstRune(s string) rune {
 type keyboardKey struct {
 	Key    string
 	IsUsed bool
-	Match  match
+	Match  puzzle.Match
 }
 
 type Message string
@@ -649,9 +491,9 @@ func main() {
 		p.Debug = sess.activeSolutionWord.String()
 		sessions.updateOrSet(sess)
 
-		fData := TemplateDataForm{}.New(sess.language, p, sess.PastWords(), sess.activeSolutionWord.hasDublicateLetters())
-		fData.IsSolved = p.isSolved()
-		fData.IsLoose = p.isLoose()
+		fData := TemplateDataForm{}.New(sess.language, p, sess.PastWords(), sess.activeSolutionWord.HasDublicateLetters())
+		fData.IsSolved = p.IsSolved()
+		fData.IsLoose = p.IsLoose()
 
 		err := t.ExecuteTemplate(w, "index.html.tmpl", fData)
 		if err != nil {
@@ -660,6 +502,7 @@ func main() {
 	})
 
 	mux.HandleFunc("GET /test", routes.TestPage(t))
+	mux.HandleFunc("GET /letter-hint", routes.LetterHint(t))
 
 	mux.HandleFunc("GET /lettr", func(w http.ResponseWriter, r *http.Request) {
 		s := handleSession(w, r, &sessions, wordDb)
@@ -670,9 +513,9 @@ func main() {
 
 		p.Debug = s.activeSolutionWord.String()
 
-		fData := TemplateDataForm{}.New(s.language, p, s.PastWords(), s.activeSolutionWord.hasDublicateLetters())
-		fData.IsSolved = p.isSolved()
-		fData.IsLoose = p.isLoose()
+		fData := TemplateDataForm{}.New(s.language, p, s.PastWords(), s.activeSolutionWord.HasDublicateLetters())
+		fData.IsSolved = p.IsSolved()
+		fData.IsLoose = p.IsLoose()
 
 		err = t.ExecuteTemplate(w, "lettr-form", fData)
 		if err != nil {
@@ -707,13 +550,12 @@ func main() {
 		p := s.lastEvaluatedAttempt
 		p.Debug = s.activeSolutionWord.String()
 
-		if p.isSolved() || p.isLoose() {
+		if p.IsSolved() || p.IsLoose() {
 			w.WriteHeader(204)
 			return
 		}
 
-		// log.Printf("debug '/lettr' route - row compare: activeRow='%d' / formRowCount='%d' \n", s.lastEvaluatedAttempt.activeRow(), countFilledFormRows(r.PostForm))
-		if s.lastEvaluatedAttempt.activeRow() != countFilledFormRows(r.PostForm)-1 {
+		if s.lastEvaluatedAttempt.ActiveRow() != countFilledFormRows(r.PostForm)-1 {
 			w.WriteHeader(422)
 			err = t.ExecuteTemplate(w, "oob-messages", TemplateDataMessages{
 				ErrMsgs: []Message{"faked rows"},
@@ -739,9 +581,9 @@ func main() {
 		s.lastEvaluatedAttempt = p
 		sessions.updateOrSet(s)
 
-		fData := TemplateDataForm{}.New(s.language, p, s.PastWords(), s.activeSolutionWord.hasDublicateLetters())
-		fData.IsSolved = p.isSolved()
-		fData.IsLoose = p.isLoose()
+		fData := TemplateDataForm{}.New(s.language, p, s.PastWords(), s.activeSolutionWord.HasDublicateLetters())
+		fData.IsSolved = p.IsSolved()
+		fData.IsLoose = p.IsLoose()
 
 		err = t.ExecuteTemplate(w, "lettr-form", fData)
 		if err != nil {
@@ -770,7 +612,7 @@ func main() {
 			}
 		}
 
-		p := puzzle{}
+		p := puzzle.Puzzle{}
 
 		s.lastEvaluatedAttempt = p
 		s.AddPastWord(s.activeSolutionWord)
@@ -779,9 +621,9 @@ func main() {
 
 		p.Debug = s.activeSolutionWord.String()
 
-		fData := TemplateDataForm{}.New(s.language, p, s.PastWords(), s.activeSolutionWord.hasDublicateLetters())
-		fData.IsSolved = p.isSolved()
-		fData.IsLoose = p.isLoose()
+		fData := TemplateDataForm{}.New(s.language, p, s.PastWords(), s.activeSolutionWord.HasDublicateLetters())
+		fData.IsSolved = p.IsSolved()
+		fData.IsLoose = p.IsLoose()
 
 		// w.Header().Add("HX-Refresh", "true")
 		err := t.ExecuteTemplate(w, "lettr-form", fData)
@@ -799,9 +641,9 @@ func main() {
 
 		p.Debug = s.activeSolutionWord.String()
 
-		fData := TemplateDataForm{}.New(s.language, p, s.PastWords(), s.activeSolutionWord.hasDublicateLetters())
-		fData.IsSolved = p.isSolved()
-		fData.IsLoose = p.isLoose()
+		fData := TemplateDataForm{}.New(s.language, p, s.PastWords(), s.activeSolutionWord.HasDublicateLetters())
+		fData.IsSolved = p.IsSolved()
+		fData.IsLoose = p.IsLoose()
 
 		err := t.ExecuteTemplate(w, "help", fData)
 		if err != nil {
@@ -999,14 +841,14 @@ func constructCookie(s session) http.Cookie {
 func generateSession(lang language, wdb wordDatabase) session { //todo: pass it by ref not by copy?
 	id := uuid.NewString()
 	expiresAt := generateSessionLifetime()
-	activeWord, err := wdb.RandomPick(lang, []word{}, 0)
+	activeWord, err := wdb.RandomPick(lang, []puzzle.Word{}, 0)
 	if err != nil {
 		log.Printf("pick random word failed: %s", err)
 
-		activeWord = word{'R', 'O', 'A', 'T', 'E'}.ToLower()
+		activeWord = puzzle.Word{'R', 'O', 'A', 'T', 'E'}.ToLower()
 	}
 
-	return session{id, expiresAt, SESSION_MAX_AGE_IN_SECONDS, lang, activeWord, puzzle{}, []word{}}
+	return session{id, expiresAt, SESSION_MAX_AGE_IN_SECONDS, lang, activeWord, puzzle.Puzzle{}, []puzzle.Word{}}
 }
 
 func generateSessionLifetime() time.Time {
@@ -1031,7 +873,7 @@ func countFilledFormRows(postPuzzleForm url.Values) uint8 {
 	return count
 }
 
-func parseForm(p puzzle, form url.Values, solutionWord word, l language, wdb wordDatabase) (puzzle, error) {
+func parseForm(p puzzle.Puzzle, form url.Values, solutionWord puzzle.Word, l language, wdb wordDatabase) (puzzle.Puzzle, error) {
 	for ri := range p.Guesses {
 		maybeGuessedWord, ok := form[fmt.Sprintf("r%d", ri)]
 		if !ok {
@@ -1055,11 +897,11 @@ func parseForm(p puzzle, form url.Values, solutionWord word, l language, wdb wor
 	return p, nil
 }
 
-func sliceToWord(maybeGuessedWord []string) (word, error) {
-	w := word{}
+func sliceToWord(maybeGuessedWord []string) (puzzle.Word, error) {
+	w := puzzle.Word{}
 
 	if len(maybeGuessedWord) != len(w) {
-		return word{}, fmt.Errorf("sliceToWord: provided slice does not match word length")
+		return puzzle.Word{}, fmt.Errorf("sliceToWord: provided slice does not match word length")
 	}
 
 	for i, l := range maybeGuessedWord {
@@ -1072,16 +914,16 @@ func sliceToWord(maybeGuessedWord []string) (word, error) {
 	return w, nil
 }
 
-func evaluateGuessedWord(guessedWord word, solutionWord word) wordGuess {
+func evaluateGuessedWord(guessedWord puzzle.Word, solutionWord puzzle.Word) puzzle.WordGuess {
 	solutionWord = solutionWord.ToLower()
 	guessedLetterCountMap := make(map[rune]int)
 
-	resultWordGuess := wordGuess{}
+	resultWordGuess := puzzle.WordGuess{}
 
 	// initilize
 	for i, gr := range guessedWord {
 		resultWordGuess[i].Letter = gr
-		resultWordGuess[i].Match = MatchNone
+		resultWordGuess[i].Match = puzzle.MatchNone
 	}
 
 	// mark exact matches
@@ -1090,25 +932,25 @@ func evaluateGuessedWord(guessedWord word, solutionWord word) wordGuess {
 
 		if exact {
 			guessedLetterCountMap[gr]++
-			resultWordGuess[i].Match = MatchExact
+			resultWordGuess[i].Match = puzzle.MatchExact
 		}
 	}
 
 	// mark some/vague matches
 	for i, gr := range guessedWord {
-		if resultWordGuess[i].Match == MatchExact {
+		if resultWordGuess[i].Match == puzzle.MatchExact {
 			continue
 		}
 
-		some := solutionWord.contains(gr)
+		some := solutionWord.Contains(gr)
 
-		if !(resultWordGuess[i].Match == MatchVague) || some {
+		if !(resultWordGuess[i].Match == puzzle.MatchVague) || some {
 			guessedLetterCountMap[gr]++
 		}
 
-		s := some && (guessedLetterCountMap[gr] <= solutionWord.count(gr))
+		s := some && (guessedLetterCountMap[gr] <= solutionWord.Count(gr))
 		if s {
-			resultWordGuess[i].Match = MatchVague
+			resultWordGuess[i].Match = puzzle.MatchVague
 		}
 	}
 

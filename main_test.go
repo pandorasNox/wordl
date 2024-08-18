@@ -11,6 +11,7 @@ import (
 
 	"github.com/agiledragon/gomonkey/v2"
 	"github.com/google/uuid"
+	"github.com/pandorasNox/lettr/pkg/puzzle"
 )
 
 func Test_constructCookie(t *testing.T) {
@@ -28,7 +29,7 @@ func Test_constructCookie(t *testing.T) {
 		// add test cases here
 		{
 			"test_name",
-			args{session{fixedUuid, expireDate, SESSION_MAX_AGE_IN_SECONDS, LANG_EN, word{}, puzzle{}, []word{}}},
+			args{session{fixedUuid, expireDate, SESSION_MAX_AGE_IN_SECONDS, LANG_EN, puzzle.Word{}, puzzle.Puzzle{}, []puzzle.Word{}}},
 			http.Cookie{
 				Name:     SESSION_COOKIE_NAME,
 				Value:    fixedUuid,
@@ -79,10 +80,10 @@ func Test_handleSession(t *testing.T) {
 				httptest.NewRecorder(),
 				httptest.NewRequest("get", "/", strings.NewReader("Hello, Reader!")),
 				&sessions{},
-				wordDatabase{db: map[language]map[wordCollection]map[word]bool{
+				wordDatabase{db: map[language]map[wordCollection]map[puzzle.Word]bool{
 					LANG_EN: {
 						WC_COMMON: {
-							word{'R', 'O', 'A', 'T', 'E'}: true,
+							puzzle.Word{'R', 'O', 'A', 'T', 'E'}: true,
 						},
 					},
 				}},
@@ -92,8 +93,8 @@ func Test_handleSession(t *testing.T) {
 				expiresAt:          time.Unix(1615256178, 0).Add(SESSION_MAX_AGE_IN_SECONDS * time.Second),
 				maxAgeSeconds:      86400,
 				language:           LANG_EN,
-				activeSolutionWord: word{'R', 'O', 'A', 'T', 'E'},
-				pastWords:          []word{},
+				activeSolutionWord: puzzle.Word{'R', 'O', 'A', 'T', 'E'},
+				pastWords:          []puzzle.Word{},
 			},
 		},
 		// {
@@ -128,16 +129,16 @@ func Test_handleSession(t *testing.T) {
 
 func Test_parseForm(t *testing.T) {
 	type args struct {
-		p            puzzle
+		p            puzzle.Puzzle
 		form         url.Values
-		solutionWord word
+		solutionWord puzzle.Word
 		language     language
 		wdb          wordDatabase
 	}
 	tests := []struct {
 		name    string
 		args    args
-		want    puzzle
+		want    puzzle.Puzzle
 		wantErr bool
 	}{
 		// TODO: Add test cases.
@@ -145,31 +146,31 @@ func Test_parseForm(t *testing.T) {
 			name: "no hits, neither same or exact",
 			// args: args{puzzle{}, url.Values{}, word{'M', 'I', 'S', 'S', 'S'}},
 			args: args{
-				p:            puzzle{},
+				p:            puzzle.Puzzle{},
 				form:         url.Values{"r0": make([]string, 5)},
-				solutionWord: word{'M', 'I', 'S', 'S', 'S'},
+				solutionWord: puzzle.Word{'M', 'I', 'S', 'S', 'S'},
 				language:     LANG_EN,
-				wdb: wordDatabase{db: map[language]map[wordCollection]map[word]bool{
+				wdb: wordDatabase{db: map[language]map[wordCollection]map[puzzle.Word]bool{
 					LANG_EN: {
 						WC_COMMON: {
-							word{'m', 'i', 's', 's', 's'}: true,
-							word{0, 0, 0, 0, 0}:           true, // equals make([]string, 5)
+							puzzle.Word{'m', 'i', 's', 's', 's'}: true,
+							puzzle.Word{0, 0, 0, 0, 0}:           true, // equals make([]string, 5)
 						},
 						WC_ALL: {
-							word{'m', 'i', 's', 's', 's'}: true,
-							word{0, 0, 0, 0, 0}:           true, // equals make([]string, 5)
+							puzzle.Word{'m', 'i', 's', 's', 's'}: true,
+							puzzle.Word{0, 0, 0, 0, 0}:           true, // equals make([]string, 5)
 						},
 					},
 				}},
 			},
-			want: puzzle{
-				Guesses: [6]wordGuess{
+			want: puzzle.Puzzle{
+				Guesses: [6]puzzle.WordGuess{
 					{
-						letterGuess{Match: MatchNone},
-						letterGuess{Match: MatchNone},
-						letterGuess{Match: MatchNone},
-						letterGuess{Match: MatchNone},
-						letterGuess{Match: MatchNone},
+						puzzle.LetterGuess{Match: puzzle.MatchNone},
+						puzzle.LetterGuess{Match: puzzle.MatchNone},
+						puzzle.LetterGuess{Match: puzzle.MatchNone},
+						puzzle.LetterGuess{Match: puzzle.MatchNone},
+						puzzle.LetterGuess{Match: puzzle.MatchNone},
 					},
 				},
 			},
@@ -178,28 +179,28 @@ func Test_parseForm(t *testing.T) {
 		{
 			name: "full exact match",
 			args: args{
-				p:            puzzle{},
+				p:            puzzle.Puzzle{},
 				form:         url.Values{"r0": []string{"M", "A", "T", "C", "H"}},
-				solutionWord: word{'M', 'A', 'T', 'C', 'H'},
+				solutionWord: puzzle.Word{'M', 'A', 'T', 'C', 'H'},
 				language:     LANG_EN,
-				wdb: wordDatabase{db: map[language]map[wordCollection]map[word]bool{
+				wdb: wordDatabase{db: map[language]map[wordCollection]map[puzzle.Word]bool{
 					LANG_EN: {
 						WC_COMMON: {
-							word{'m', 'a', 't', 'c', 'h'}: true,
+							puzzle.Word{'m', 'a', 't', 'c', 'h'}: true,
 						},
 						WC_ALL: {
-							word{'m', 'a', 't', 'c', 'h'}: true,
+							puzzle.Word{'m', 'a', 't', 'c', 'h'}: true,
 						},
 					},
 				}},
 			},
-			want: puzzle{"", [6]wordGuess{
+			want: puzzle.Puzzle{Debug: "", Guesses: [6]puzzle.WordGuess{
 				{
-					{'m', MatchExact},
-					{'a', MatchExact},
-					{'t', MatchExact},
-					{'c', MatchExact},
-					{'h', MatchExact},
+					{Letter: 'm', Match: puzzle.MatchExact},
+					{Letter: 'a', Match: puzzle.MatchExact},
+					{Letter: 't', Match: puzzle.MatchExact},
+					{Letter: 'c', Match: puzzle.MatchExact},
+					{Letter: 'h', Match: puzzle.MatchExact},
 				},
 			}},
 			wantErr: false,
@@ -216,113 +217,113 @@ func Test_parseForm(t *testing.T) {
 
 func Test_evaluateGuessedWord(t *testing.T) {
 	type args struct {
-		guessedWord  word
-		solutionWord word
+		guessedWord  puzzle.Word
+		solutionWord puzzle.Word
 	}
 	tests := []struct {
 		name string
 		args args
-		want wordGuess
+		want puzzle.WordGuess
 	}{
 		// test cases
 		{
 			name: "no hits, neither same or exact",
 			args: args{
-				guessedWord:  word{},
-				solutionWord: word{'M', 'I', 'S', 'S', 'S'},
+				guessedWord:  puzzle.Word{},
+				solutionWord: puzzle.Word{'M', 'I', 'S', 'S', 'S'},
 			},
-			want: wordGuess{
-				{Match: MatchNone},
-				{Match: MatchNone},
-				{Match: MatchNone},
-				{Match: MatchNone},
-				{Match: MatchNone},
+			want: puzzle.WordGuess{
+				{Match: puzzle.MatchNone},
+				{Match: puzzle.MatchNone},
+				{Match: puzzle.MatchNone},
+				{Match: puzzle.MatchNone},
+				{Match: puzzle.MatchNone},
 			},
 		},
 		{
 			name: "full exact match",
 			args: args{
-				guessedWord:  word{'m', 'a', 't', 'c', 'h'},
-				solutionWord: word{'M', 'A', 'T', 'C', 'H'},
+				guessedWord:  puzzle.Word{'m', 'a', 't', 'c', 'h'},
+				solutionWord: puzzle.Word{'M', 'A', 'T', 'C', 'H'},
 			},
-			want: wordGuess{
-				{'m', MatchExact},
-				{'a', MatchExact},
-				{'t', MatchExact},
-				{'c', MatchExact},
-				{'h', MatchExact},
+			want: puzzle.WordGuess{
+				{'m', puzzle.MatchExact},
+				{'a', puzzle.MatchExact},
+				{'t', puzzle.MatchExact},
+				{'c', puzzle.MatchExact},
+				{'h', puzzle.MatchExact},
 			},
 		},
 		{
 			name: "partial exact and partial some match",
 			args: args{
-				guessedWord:  word{'r', 'a', 'u', 'l', 'o'},
-				solutionWord: word{'R', 'O', 'A', 'T', 'E'},
+				guessedWord:  puzzle.Word{'r', 'a', 'u', 'l', 'o'},
+				solutionWord: puzzle.Word{'R', 'O', 'A', 'T', 'E'},
 			},
-			want: wordGuess{
-				{'r', MatchExact},
-				{'a', MatchVague},
-				{'u', MatchNone},
-				{'l', MatchNone},
-				{'o', MatchVague},
+			want: puzzle.WordGuess{
+				{'r', puzzle.MatchExact},
+				{'a', puzzle.MatchVague},
+				{'u', puzzle.MatchNone},
+				{'l', puzzle.MatchNone},
+				{'o', puzzle.MatchVague},
 			},
 		},
 		{
 			name: "guessed word contains duplicats",
 			args: args{
-				guessedWord:  word{'r', 'o', 't', 'o', 'r'},
-				solutionWord: word{'R', 'O', 'A', 'T', 'E'},
+				guessedWord:  puzzle.Word{'r', 'o', 't', 'o', 'r'},
+				solutionWord: puzzle.Word{'R', 'O', 'A', 'T', 'E'},
 			},
-			want: wordGuess{
-				{'r', MatchExact},
-				{'o', MatchExact},
-				{'t', MatchVague},
-				{'o', MatchNone}, // both false bec we already found it or even already guesst the exact match
-				{'r', MatchNone}, // both false bec we already found it or even already guesst the exact match
+			want: puzzle.WordGuess{
+				{'r', puzzle.MatchExact},
+				{'o', puzzle.MatchExact},
+				{'t', puzzle.MatchVague},
+				{'o', puzzle.MatchNone}, // both false bec we already found it or even already guesst the exact match
+				{'r', puzzle.MatchNone}, // both false bec we already found it or even already guesst the exact match
 			},
 		},
 		{
 			name: "guessed word contains duplicats at end",
 			args: args{
-				guessedWord:  word{'i', 'x', 'i', 'i', 'i'},
-				solutionWord: word{'L', 'X', 'I', 'I', 'I'},
+				guessedWord:  puzzle.Word{'i', 'x', 'i', 'i', 'i'},
+				solutionWord: puzzle.Word{'L', 'X', 'I', 'I', 'I'},
 			},
-			want: wordGuess{
-				{'i', MatchNone},
-				{'x', MatchExact},
-				{'i', MatchExact},
-				{'i', MatchExact},
-				{'i', MatchExact},
+			want: puzzle.WordGuess{
+				{'i', puzzle.MatchNone},
+				{'x', puzzle.MatchExact},
+				{'i', puzzle.MatchExact},
+				{'i', puzzle.MatchExact},
+				{'i', puzzle.MatchExact},
 			},
 		},
 		{
 			name: "guessed word contains duplicats at end fpp",
 			args: args{
-				guessedWord:  word{'l', 'i', 'i', 'i', 'i'},
-				solutionWord: word{'I', 'L', 'X', 'I', 'I'},
+				guessedWord:  puzzle.Word{'l', 'i', 'i', 'i', 'i'},
+				solutionWord: puzzle.Word{'I', 'L', 'X', 'I', 'I'},
 			},
-			want: wordGuess{
-				{'l', MatchVague},
-				{'i', MatchVague},
-				{'i', MatchNone},
-				{'i', MatchExact},
-				{'i', MatchExact},
+			want: puzzle.WordGuess{
+				{'l', puzzle.MatchVague},
+				{'i', puzzle.MatchVague},
+				{'i', puzzle.MatchNone},
+				{'i', puzzle.MatchExact},
+				{'i', puzzle.MatchExact},
 			},
 		},
 		// {
 		// 	name: "target word contains duplicats / guessed word contains duplicats",
 		// 	args: args{
-		// 		puzzle{},
+		// 		puzzle.Puzzle{},
 		// 		url.Values{"r0c0": []string{"M"}, "r0c1": []string{"A"}, "r0c2": []string{"T"}, "r0c3": []string{"C"}, "r0c4": []string{"H"}},
 		// 		word{'M', 'A', 'T', 'C', 'H'},
 		// 	},
-		// 	want: puzzle{"", wordGuess{
+		// 	want: puzzle.Puzzle{"", puzzle.wordGuess{
 		// 		{
-		// 			{'r', LetterExact},
-		// 			{'o', LetterExact},
-		// 			{'t', LetterExact},
-		// 			{'o', LetterExact},
-		// 			{'r', LetterExact},
+		// 			{'r', puzzle.LetterExact},
+		// 			{'o', puzzle.LetterExact},
+		// 			{'t', puzzle.LetterExact},
+		// 			{'o', puzzle.LetterExact},
+		// 			{'r', puzzle.LetterExact},
 		// 		},
 		// 	}},
 		// },

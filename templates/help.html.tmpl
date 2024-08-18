@@ -33,6 +33,24 @@
 
             <!-- start accordion-tab  -->
             <div class="border rounded border-gray-300 dark:border-gray-700">
+                <label for="collapse-reveal-letter" class="ease relative flex cursor-pointer items-center dark:bg-gray-900 px-4 py-3 pr-10 text-gray-500 transition duration-500">
+                    <svg class="h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                    <span>Reveal next letter</span>
+                </label>
+                <input class="peer appearance-none hidden" type="checkbox" name="collapse-reveal-letter" id="collapse-reveal-letter" />
+
+                <div class="ease max-h-0 peer-checked:max-h-screen overflow-hidden peer-checked:border-t border-gray-300 dark:border-gray-800 bg-gray-100 dark:bg-gray-800 px-4 duration-500">
+                    <div class="p-3">
+                        {{ template "reveal-letter" . }}
+                    </div>
+                </div>
+            </div>
+            <!-- end accordion-tab  -->
+
+            <!-- start accordion-tab  -->
+            <div class="border rounded border-gray-300 dark:border-gray-700">
                 <label for="collapse200" class="ease relative flex cursor-pointer items-center dark:bg-gray-900 px-4 py-3 pr-10 text-gray-500 transition duration-500">
                     <svg class="h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
@@ -58,6 +76,23 @@
     <p>
         <span>has duplicates?: </span>
         <span class="w-5 text-pink-500">{{ if .SolutionHasDublicateLetters }}yes{{ else }}no{{ end }}</span>
+    </p>
+{{ end }}
+
+{{ define "reveal-letter" }}
+    <p>
+        <span>hint: </span>
+        <span class="w-5 text-pink-500" id="letter-hints"></span>
+    </p>
+    <p>
+        <button
+            class="text-xs text-gray-900 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg px-3.5 py-1.5 dark:bg-gray-800 dark:text-white dark:border-gray-700 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700"
+            hx-get="/letter-hint"
+            hx-target="#letter-hints"
+            hx-swap="beforeend"
+        >
+            <span>get a letter</span>
+        </button>
     </p>
 {{ end }}
 
