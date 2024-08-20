@@ -1,6 +1,9 @@
 package puzzle
 
-import "unicode"
+import (
+	"fmt"
+	"unicode"
+)
 
 type Word [5]rune
 
@@ -62,4 +65,24 @@ func (w Word) ToLower() Word {
 	}
 
 	return w
+}
+
+func toWord(wo string) (Word, error) {
+	out := Word{}
+
+	length := 0
+	for i, l := range wo {
+		length++
+		if length > len(out) {
+			return Word{}, fmt.Errorf("string does not match allowed word length: length=%d, expectedLength=%d", length, len(out))
+		}
+
+		out[i] = l
+	}
+
+	if length < len(out) {
+		return Word{}, fmt.Errorf("string is to short: length=%d, expectedLength=%d", length, len(out))
+	}
+
+	return out, nil
 }

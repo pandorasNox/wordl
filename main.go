@@ -1,14 +1,12 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"embed"
 	"errors"
 	"fmt"
 	"html/template"
 	"io"
-	"math/rand"
 	"regexp"
 	"strings"
 	"sync"
@@ -23,19 +21,17 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/google/uuid"
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/pandorasNox/lettr/pkg/github"
+	"github.com/pandorasNox/lettr/pkg/language"
 	"github.com/pandorasNox/lettr/pkg/middleware"
 	"github.com/pandorasNox/lettr/pkg/puzzle"
 	"github.com/pandorasNox/lettr/pkg/routes"
+	"github.com/pandorasNox/lettr/pkg/session"
 )
 
 var Revision = "0000000"
 var FaviconPath = "/static/assets/favicon"
-
-const SESSION_COOKIE_NAME = "session"
-const SESSION_MAX_AGE_IN_SECONDS = 24 * 60 * 60
 
 //go:embed configs/*.txt
 //go:embed templates/*.html.tmpl
@@ -63,82 +59,13 @@ type counterState struct {
 	count int
 }
 
-type session struct {
-	// todo: think about using mutex or channel for rw session
-	id                   string
-	expiresAt            time.Time
-	maxAgeSeconds        int
-	language             language
-	activeSolutionWord   puzzle.Word
-	lastEvaluatedAttempt puzzle.Puzzle
-	pastWords            []puzzle.Word
-}
-
-func (s *session) AddPastWord(w puzzle.Word) {
-	s.pastWords = append(s.pastWords, w)
-}
-
-func (s *session) PastWords() []puzzle.Word {
-	return slices.Clone(s.pastWords)
-}
-
-type sessions []session
-
-func (ss sessions) String() string {
-	out := ""
-	for _, s := range ss {
-		out = out + s.id + " " + s.expiresAt.String() + "\n"
-	}
-
-	return out
-}
-
-func (ss *sessions) updateOrSet(sess session) {
-	index := slices.IndexFunc((*ss), func(s session) bool {
-		return s.id == sess.id
-	})
-	if index == -1 {
-		*ss = append(*ss, sess)
-		return
-	}
-
-	(*ss)[index] = sess
-}
-
-type language string
-
-func NewLang(maybeLang string) (language, error) {
-	switch language(maybeLang) {
-	case LANG_EN, LANG_DE:
-		return language(maybeLang), nil
+func NewLang(maybeLang string) (language.Language, error) {
+	switch language.Language(maybeLang) {
+	case language.LANG_EN, language.LANG_DE:
+		return language.Language(maybeLang), nil
 	default:
-		return LANG_EN, fmt.Errorf("couldn't create new language from given value: '%s'", maybeLang)
+		return language.LANG_EN, fmt.Errorf("couldn't create new language from given value: '%s'", maybeLang)
 	}
-}
-
-const (
-	LANG_EN language = "en"
-	LANG_DE language = "de"
-)
-
-func toWord(wo string) (puzzle.Word, error) {
-	out := puzzle.Word{}
-
-	length := 0
-	for i, l := range wo {
-		length++
-		if length > len(out) {
-			return puzzle.Word{}, fmt.Errorf("string does not match allowed word length: length=%d, expectedLength=%d", length, len(out))
-		}
-
-		out[i] = l
-	}
-
-	if length < len(out) {
-		return puzzle.Word{}, fmt.Errorf("string is to short: length=%d, expectedLength=%d", length, len(out))
-	}
-
-	return out, nil
 }
 
 // inspiration see: https://forum.golangbridge.org/t/can-i-use-enum-in-template/25296
@@ -154,7 +81,7 @@ type TemplateDataForm struct {
 	IsSolved                    bool
 	IsLoose                     bool
 	JSCachePurgeTimestamp       int64
-	Language                    language
+	Language                    language.Language
 	Revision                    string
 	FaviconPath                 string
 	Keyboard                    keyboard
@@ -162,7 +89,7 @@ type TemplateDataForm struct {
 	SolutionHasDublicateLetters bool
 }
 
-func (fd TemplateDataForm) New(l language, p puzzle.Puzzle, pastWords []puzzle.Word, SolutionHasDublicateLetters bool) TemplateDataForm {
+func (fd TemplateDataForm) New(l language.Language, p puzzle.Puzzle, pastWords []puzzle.Word, SolutionHasDublicateLetters bool) TemplateDataForm {
 	kb := keyboard{}
 	kb.Init(l, p.LetterGuesses())
 
@@ -210,146 +137,11 @@ func (tds TemplateDataSuggest) validate() error {
 	return nil
 }
 
-type wordCollection string
-
-const (
-	WC_ALL    wordCollection = "wc_all"
-	WC_COMMON wordCollection = "wc_common"
-)
-
-type wordDatabase struct {
-	db map[language]map[wordCollection]map[puzzle.Word]bool
-}
-
-func (wdb *wordDatabase) Init(fs iofs.FS, filePathsByLanguage map[language]map[wordCollection][]string) error {
-	wdb.db = make(map[language]map[wordCollection]map[puzzle.Word]bool)
-
-	for l, collection := range filePathsByLanguage {
-		wdb.db[l] = make(map[wordCollection]map[puzzle.Word]bool)
-		for c, paths := range collection {
-			wdb.db[l][c] = make(map[puzzle.Word]bool)
-
-			for _, path := range paths {
-				f, err := fs.Open(path)
-				if err != nil {
-					return fmt.Errorf("wordDatabase init failed when opening file: %s", err)
-				}
-				defer f.Close()
-
-				fInfo, err := f.Stat()
-				if err != nil {
-					return fmt.Errorf("wordDatabase init failed when obtaining stat: %s", err)
-				}
-
-				var allowedSize int64 = 2 * 1024 * 1024 // 2 MB
-				if fInfo.Size() > allowedSize {
-					return fmt.Errorf("wordDatabase init failed with forbidden file size: path='%s', size='%d'", path, fInfo.Size())
-				}
-
-				scanner := bufio.NewScanner(f)
-				var line int = 0
-				for scanner.Scan() {
-					if line == 0 { // skip first metadata line
-						line++
-						continue
-					}
-
-					candidate := scanner.Text()
-					word, err := toWord(candidate)
-					if err != nil {
-						return fmt.Errorf("wordDatabase init, couldn't parse line to word: line='%s', err=%s", candidate, err)
-					}
-
-					wdb.db[l][c][word.ToLower()] = true
-
-					line++
-				}
-				if err := scanner.Err(); err != nil {
-					return fmt.Errorf("wordDatabase init failed scanning file with: path='%s', err=%s", path, err)
-				}
-			}
-		}
-	}
-
-	return nil
-}
-
-func (wdb wordDatabase) Exists(l language, w puzzle.Word) bool {
-	db, ok := wdb.db[l]
-	if !ok {
-		return false
-	}
-
-	db_c, ok := db[WC_ALL]
-	if !ok {
-		return false
-	}
-
-	_, ok = db_c[w.ToLower()]
-	return ok
-}
-
-func (wdb wordDatabase) RandomPick(l language, avoidList []puzzle.Word, retryAkkumulator uint8) (puzzle.Word, error) {
-	const MAX_RETRY uint8 = 10
-
-	if retryAkkumulator > MAX_RETRY {
-		return puzzle.Word{}, fmt.Errorf("RandomPick exceeded retries: retryAkkumulator='%d' | MAX_RETRY='%d'", retryAkkumulator, MAX_RETRY)
-	}
-
-	db, ok := wdb.db[l]
-	if !ok {
-		return puzzle.Word{}, fmt.Errorf("RandomPick failed with unknown language: '%s'", l)
-	}
-
-	collection := WC_COMMON
-	db_c, ok := db[collection]
-	if !ok {
-		collection = WC_ALL
-
-		db_c, ok = db[collection]
-		if !ok {
-			return puzzle.Word{}, fmt.Errorf("RandomPick with lang '%s' failed with unknown collection: '%s'", l, collection)
-		}
-	}
-
-	randsource := rand.NewSource(time.Now().UnixNano())
-	randgenerator := rand.New(randsource)
-	rolledLine := randgenerator.Intn(len(db_c))
-
-	currentLine := 0
-	for w := range db_c {
-		if currentLine == rolledLine {
-
-			wordContained := slices.ContainsFunc(avoidList, func(wo puzzle.Word) bool {
-				return w.IsEqual(wo)
-			})
-			if wordContained {
-				return wdb.RandomPick(l, avoidList, retryAkkumulator+1)
-			}
-
-			return w, nil
-		}
-
-		currentLine++
-	}
-
-	return puzzle.Word{}, fmt.Errorf("RandomPick could not find random line aka this should never happen ^^")
-}
-
-func (wdb wordDatabase) RandomPickWithFallback(l language, avoidList []puzzle.Word, retryAkkumulator uint8) puzzle.Word {
-	w, err := wdb.RandomPick(l, avoidList, retryAkkumulator)
-	if err != nil {
-		return puzzle.Word{'R', 'O', 'A', 'T', 'E'}.ToLower()
-	}
-
-	return w.ToLower()
-}
-
 type keyboard struct {
 	KeyGrid [][]keyboardKey
 }
 
-func (k *keyboard) Init(l language, lgs []puzzle.LetterGuess) {
+func (k *keyboard) Init(l language.Language, lgs []puzzle.LetterGuess) {
 	k.KeyGrid = [][]keyboardKey{
 		{{"Q", false, puzzle.MatchNone}, {"W", false, puzzle.MatchNone}, {"E", false, puzzle.MatchNone}, {"R", false, puzzle.MatchNone}, {"T", false, puzzle.MatchNone}, {"Y", false, puzzle.MatchNone}, {"U", false, puzzle.MatchNone}, {"I", false, puzzle.MatchNone}, {"O", false, puzzle.MatchNone}, {"P", false, puzzle.MatchNone}, {"Delete", false, puzzle.MatchNone}},
 		{{"A", false, puzzle.MatchNone}, {"S", false, puzzle.MatchNone}, {"D", false, puzzle.MatchNone}, {"F", false, puzzle.MatchNone}, {"G", false, puzzle.MatchNone}, {"H", false, puzzle.MatchNone}, {"J", false, puzzle.MatchNone}, {"K", false, puzzle.MatchNone}, {"L", false, puzzle.MatchNone}, {"Enter", false, puzzle.MatchNone}},
@@ -423,37 +215,14 @@ func getAllFilenames(efs iofs.FS) (files []string, err error) {
 	return files, nil
 }
 
-func filePathsByLang() map[language]map[wordCollection][]string {
-	return map[language]map[wordCollection][]string{
-		LANG_EN: {
-			WC_ALL: {
-				"configs/corpora-eng_news_2023_10K-export.txt",
-				"configs/en-en.words.v2.txt",
-			},
-			WC_COMMON: {
-				"configs/corpora-eng_news_2023_10K-export.txt",
-			},
-		},
-		LANG_DE: {
-			WC_ALL: {
-				"configs/corpora-deu_news_2023_10K-export.txt",
-				"configs/de-de.words.v2.txt",
-			},
-			WC_COMMON: {
-				"configs/corpora-deu_news_2023_10K-export.txt",
-			},
-		},
-	}
-}
-
 func main() {
 	log.Println("staring server...")
 
 	envCfg := envConfig()
-	sessions := sessions{}
+	sessions := session.NewSessions()
 
-	wordDb := wordDatabase{}
-	err := wordDb.Init(fs, filePathsByLang())
+	wordDb := puzzle.WordDatabase{}
+	err := wordDb.Init(fs, puzzle.FilePathsByLang())
 	if err != nil {
 		log.Fatalf("init wordDatabase failed: %s", err)
 	}
@@ -484,14 +253,14 @@ func main() {
 	)
 
 	mux.HandleFunc("GET /", func(w http.ResponseWriter, req *http.Request) {
-		sess := handleSession(w, req, &sessions, wordDb)
+		sess := session.HandleSession(w, req, &sessions, wordDb)
 
-		p := sess.lastEvaluatedAttempt
-		// log.Printf("debug '/' route - sess.lastEvaluatedAttempt:\n %v\n", wo)
-		p.Debug = sess.activeSolutionWord.String()
-		sessions.updateOrSet(sess)
+		p := sess.LastEvaluatedAttempt()
+		// log.Printf("debug '/' route - sess.LastEvaluatedAttempt():\n %v\n", wo)
+		p.Debug = sess.ActiveSolutionWord().String()
+		sessions.UpdateOrSet(sess)
 
-		fData := TemplateDataForm{}.New(sess.language, p, sess.PastWords(), sess.activeSolutionWord.HasDublicateLetters())
+		fData := TemplateDataForm{}.New(sess.Language(), p, sess.PastWords(), sess.ActiveSolutionWord().HasDublicateLetters())
 		fData.IsSolved = p.IsSolved()
 		fData.IsLoose = p.IsLoose()
 
@@ -502,18 +271,19 @@ func main() {
 	})
 
 	mux.HandleFunc("GET /test", routes.TestPage(t))
+
 	mux.HandleFunc("GET /letter-hint", routes.LetterHint(t))
 
 	mux.HandleFunc("GET /lettr", func(w http.ResponseWriter, r *http.Request) {
-		s := handleSession(w, r, &sessions, wordDb)
+		s := session.HandleSession(w, r, &sessions, wordDb)
 
-		p := s.lastEvaluatedAttempt
+		p := s.LastEvaluatedAttempt()
 
-		sessions.updateOrSet(s)
+		sessions.UpdateOrSet(s)
 
-		p.Debug = s.activeSolutionWord.String()
+		p.Debug = s.ActiveSolutionWord().String()
 
-		fData := TemplateDataForm{}.New(s.language, p, s.PastWords(), s.activeSolutionWord.HasDublicateLetters())
+		fData := TemplateDataForm{}.New(s.Language(), p, s.PastWords(), s.ActiveSolutionWord().HasDublicateLetters())
 		fData.IsSolved = p.IsSolved()
 		fData.IsLoose = p.IsLoose()
 
@@ -524,7 +294,7 @@ func main() {
 	})
 
 	mux.HandleFunc("POST /lettr", func(w http.ResponseWriter, r *http.Request) {
-		s := handleSession(w, r, &sessions, wordDb)
+		s := session.HandleSession(w, r, &sessions, wordDb)
 
 		// b, err := io.ReadAll(r.Body)
 		// if err != nil {
@@ -547,15 +317,15 @@ func main() {
 			return
 		}
 
-		p := s.lastEvaluatedAttempt
-		p.Debug = s.activeSolutionWord.String()
+		p := s.LastEvaluatedAttempt()
+		p.Debug = s.ActiveSolutionWord().String()
 
 		if p.IsSolved() || p.IsLoose() {
 			w.WriteHeader(204)
 			return
 		}
 
-		if s.lastEvaluatedAttempt.ActiveRow() != countFilledFormRows(r.PostForm)-1 {
+		if s.LastEvaluatedAttempt().ActiveRow() != countFilledFormRows(r.PostForm)-1 {
 			w.WriteHeader(422)
 			err = t.ExecuteTemplate(w, "oob-messages", TemplateDataMessages{
 				ErrMsgs: []Message{"faked rows"},
@@ -566,7 +336,7 @@ func main() {
 			return
 		}
 
-		p, err = parseForm(p, r.PostForm, s.activeSolutionWord, s.language, wordDb)
+		p, err = parseForm(p, r.PostForm, s.ActiveSolutionWord(), s.Language(), wordDb)
 		if err == ErrNotInWordList {
 			w.WriteHeader(422)
 			err = t.ExecuteTemplate(w, "oob-messages", TemplateDataMessages{
@@ -578,10 +348,10 @@ func main() {
 			return
 		}
 
-		s.lastEvaluatedAttempt = p
-		sessions.updateOrSet(s)
+		s.SetLastEvaluatedAttempt(p)
+		sessions.UpdateOrSet(s)
 
-		fData := TemplateDataForm{}.New(s.language, p, s.PastWords(), s.activeSolutionWord.HasDublicateLetters())
+		fData := TemplateDataForm{}.New(s.Language(), p, s.PastWords(), s.ActiveSolutionWord().HasDublicateLetters())
 		fData.IsSolved = p.IsSolved()
 		fData.IsLoose = p.IsLoose()
 
@@ -592,17 +362,17 @@ func main() {
 	})
 
 	mux.HandleFunc("POST /new", func(w http.ResponseWriter, r *http.Request) {
-		s := handleSession(w, r, &sessions, wordDb)
+		s := session.HandleSession(w, r, &sessions, wordDb)
 
 		// handle lang switch
-		l := s.language
+		l := s.Language()
 		maybeLang := r.FormValue("lang")
 		if maybeLang != "" {
 			l, _ = NewLang(maybeLang)
-			s.language = l
+			s.SetLanguage(l)
 
 			type TemplateDataLanguge struct {
-				Language language
+				Language language.Language
 			}
 			tData := TemplateDataLanguge{Language: l}
 
@@ -614,14 +384,14 @@ func main() {
 
 		p := puzzle.Puzzle{}
 
-		s.lastEvaluatedAttempt = p
-		s.AddPastWord(s.activeSolutionWord)
-		s.activeSolutionWord = wordDb.RandomPickWithFallback(l, s.pastWords, 0)
-		sessions.updateOrSet(s)
+		s.SetLastEvaluatedAttempt(p)
+		s.AddPastWord(s.ActiveSolutionWord())
+		s.SetActiveSolutionWord(wordDb.RandomPickWithFallback(l, s.PastWords(), 0))
+		sessions.UpdateOrSet(s)
 
-		p.Debug = s.activeSolutionWord.String()
+		p.Debug = s.ActiveSolutionWord().String()
 
-		fData := TemplateDataForm{}.New(s.language, p, s.PastWords(), s.activeSolutionWord.HasDublicateLetters())
+		fData := TemplateDataForm{}.New(s.Language(), p, s.PastWords(), s.ActiveSolutionWord().HasDublicateLetters())
 		fData.IsSolved = p.IsSolved()
 		fData.IsLoose = p.IsLoose()
 
@@ -633,15 +403,15 @@ func main() {
 	})
 
 	mux.HandleFunc("POST /help", func(w http.ResponseWriter, r *http.Request) {
-		s := handleSession(w, r, &sessions, wordDb)
+		s := session.HandleSession(w, r, &sessions, wordDb)
 
-		p := s.lastEvaluatedAttempt
+		p := s.LastEvaluatedAttempt()
 
-		sessions.updateOrSet(s)
+		sessions.UpdateOrSet(s)
 
-		p.Debug = s.activeSolutionWord.String()
+		p.Debug = s.ActiveSolutionWord().String()
 
-		fData := TemplateDataForm{}.New(s.language, p, s.PastWords(), s.activeSolutionWord.HasDublicateLetters())
+		fData := TemplateDataForm{}.New(s.Language(), p, s.PastWords(), s.ActiveSolutionWord().HasDublicateLetters())
 		fData.IsSolved = p.IsSolved()
 		fData.IsLoose = p.IsLoose()
 
@@ -785,76 +555,6 @@ func envConfig() env {
 	return env{port: port, githubToken: gt}
 }
 
-func handleSession(w http.ResponseWriter, req *http.Request, sessions *sessions, wdb wordDatabase) session {
-	var err error
-	var sess session
-
-	cookie, err := req.Cookie(SESSION_COOKIE_NAME)
-	if err != nil {
-		return newSession(w, sessions, wdb)
-	}
-
-	if cookie == nil {
-		return newSession(w, sessions, wdb)
-	}
-
-	sid := cookie.Value
-	i := slices.IndexFunc(*sessions, func(s session) bool {
-		return s.id == sid
-	})
-	if i == -1 {
-		return newSession(w, sessions, wdb)
-	}
-
-	sess = (*sessions)[i]
-
-	c := constructCookie(sess)
-	http.SetCookie(w, &c)
-
-	sess.expiresAt = generateSessionLifetime()
-	(*sessions)[i] = sess
-
-	return sess
-}
-
-func newSession(w http.ResponseWriter, sessions *sessions, wdb wordDatabase) session {
-	sess := generateSession(LANG_EN, wdb)
-	*sessions = append(*sessions, sess)
-	c := constructCookie(sess)
-	http.SetCookie(w, &c)
-
-	return sess
-}
-
-func constructCookie(s session) http.Cookie {
-	return http.Cookie{
-		Name:     SESSION_COOKIE_NAME,
-		Value:    s.id,
-		Path:     "/",
-		MaxAge:   s.maxAgeSeconds,
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteLaxMode,
-	}
-}
-
-func generateSession(lang language, wdb wordDatabase) session { //todo: pass it by ref not by copy?
-	id := uuid.NewString()
-	expiresAt := generateSessionLifetime()
-	activeWord, err := wdb.RandomPick(lang, []puzzle.Word{}, 0)
-	if err != nil {
-		log.Printf("pick random word failed: %s", err)
-
-		activeWord = puzzle.Word{'R', 'O', 'A', 'T', 'E'}.ToLower()
-	}
-
-	return session{id, expiresAt, SESSION_MAX_AGE_IN_SECONDS, lang, activeWord, puzzle.Puzzle{}, []puzzle.Word{}}
-}
-
-func generateSessionLifetime() time.Time {
-	return time.Now().Add(SESSION_MAX_AGE_IN_SECONDS * time.Second) // todo: 24 hour, sec now only for testing
-}
-
 func countFilledFormRows(postPuzzleForm url.Values) uint8 {
 	isfilled := func(row []string) bool {
 		emptyButWithLen := make([]string, len(row)) // we need empty slice but with right elem length
@@ -873,7 +573,7 @@ func countFilledFormRows(postPuzzleForm url.Values) uint8 {
 	return count
 }
 
-func parseForm(p puzzle.Puzzle, form url.Values, solutionWord puzzle.Word, l language, wdb wordDatabase) (puzzle.Puzzle, error) {
+func parseForm(p puzzle.Puzzle, form url.Values, solutionWord puzzle.Word, l language.Language, wdb puzzle.WordDatabase) (puzzle.Puzzle, error) {
 	for ri := range p.Guesses {
 		maybeGuessedWord, ok := form[fmt.Sprintf("r%d", ri)]
 		if !ok {
