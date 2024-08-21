@@ -11,24 +11,24 @@ import (
 	"github.com/pandorasNox/lettr/pkg/language"
 )
 
-type wordCollection string
+type WordCollection string
 
 const (
-	WC_ALL    wordCollection = "wc_all"
-	WC_COMMON wordCollection = "wc_common"
+	WC_ALL    WordCollection = "wc_all"
+	WC_COMMON WordCollection = "wc_common"
 )
 
 type WordDatabase struct {
-	db map[language.Language]map[wordCollection]map[Word]bool
+	Db map[language.Language]map[WordCollection]map[Word]bool
 }
 
-func (wdb *WordDatabase) Init(fs iofs.FS, filePathsByLanguage map[language.Language]map[wordCollection][]string) error {
-	wdb.db = make(map[language.Language]map[wordCollection]map[Word]bool)
+func (wdb *WordDatabase) Init(fs iofs.FS, filePathsByLanguage map[language.Language]map[WordCollection][]string) error {
+	wdb.Db = make(map[language.Language]map[WordCollection]map[Word]bool)
 
 	for l, collection := range filePathsByLanguage {
-		wdb.db[l] = make(map[wordCollection]map[Word]bool)
+		wdb.Db[l] = make(map[WordCollection]map[Word]bool)
 		for c, paths := range collection {
-			wdb.db[l][c] = make(map[Word]bool)
+			wdb.Db[l][c] = make(map[Word]bool)
 
 			for _, path := range paths {
 				f, err := fs.Open(path)
@@ -61,7 +61,7 @@ func (wdb *WordDatabase) Init(fs iofs.FS, filePathsByLanguage map[language.Langu
 						return fmt.Errorf("wordDatabase init, couldn't parse line to word: line='%s', err=%s", candidate, err)
 					}
 
-					wdb.db[l][c][word.ToLower()] = true
+					wdb.Db[l][c][word.ToLower()] = true
 
 					line++
 				}
@@ -76,7 +76,7 @@ func (wdb *WordDatabase) Init(fs iofs.FS, filePathsByLanguage map[language.Langu
 }
 
 func (wdb WordDatabase) Exists(l language.Language, w Word) bool {
-	db, ok := wdb.db[l]
+	db, ok := wdb.Db[l]
 	if !ok {
 		return false
 	}
@@ -97,7 +97,7 @@ func (wdb WordDatabase) RandomPick(l language.Language, avoidList []Word, retryA
 		return Word{}, fmt.Errorf("RandomPick exceeded retries: retryAkkumulator='%d' | MAX_RETRY='%d'", retryAkkumulator, MAX_RETRY)
 	}
 
-	db, ok := wdb.db[l]
+	db, ok := wdb.Db[l]
 	if !ok {
 		return Word{}, fmt.Errorf("RandomPick failed with unknown language: '%s'", l)
 	}
@@ -146,8 +146,8 @@ func (wdb WordDatabase) RandomPickWithFallback(l language.Language, avoidList []
 	return w.ToLower()
 }
 
-func FilePathsByLang() map[language.Language]map[wordCollection][]string {
-	return map[language.Language]map[wordCollection][]string{
+func FilePathsByLang() map[language.Language]map[WordCollection][]string {
+	return map[language.Language]map[WordCollection][]string{
 		language.LANG_EN: {
 			WC_ALL: {
 				"configs/corpora-eng_news_2023_10K-export.txt",

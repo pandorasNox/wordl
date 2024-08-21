@@ -1,139 +1,21 @@
 package main
 
 import (
-	"net/http"
-	"net/http/httptest"
 	"net/url"
 	"reflect"
-	"strings"
 	"testing"
-	"time"
 
-	"github.com/agiledragon/gomonkey/v2"
-	"github.com/google/uuid"
+	"github.com/pandorasNox/lettr/pkg/language"
 	"github.com/pandorasNox/lettr/pkg/puzzle"
 )
-
-func Test_constructCookie(t *testing.T) {
-	fixedUuid := "9566c74d-1003-4c4d-bbbb-0407d1e2c649"
-	expireDate := time.Date(2024, 02, 27, 0, 0, 0, 0, time.Now().Location())
-
-	type args struct {
-		s session
-	}
-	tests := []struct {
-		name string
-		args args
-		want http.Cookie
-	}{
-		// add test cases here
-		{
-			"test_name",
-			args{session{fixedUuid, expireDate, SESSION_MAX_AGE_IN_SECONDS, LANG_EN, puzzle.Word{}, puzzle.Puzzle{}, []puzzle.Word{}}},
-			http.Cookie{
-				Name:     SESSION_COOKIE_NAME,
-				Value:    fixedUuid,
-				Path:     "/",
-				MaxAge:   SESSION_MAX_AGE_IN_SECONDS,
-				HttpOnly: true,
-				Secure:   true,
-				SameSite: http.SameSiteLaxMode,
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := constructCookie(tt.args.s); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("constructCookie() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_handleSession(t *testing.T) {
-	type args struct {
-		w        http.ResponseWriter
-		req      *http.Request
-		sessions *sessions
-		wdb      wordDatabase
-	}
-
-	// monkey patch time.Now
-	patchFnTime := func() time.Time {
-		return time.Unix(1615256178, 0)
-	}
-	patchesTime := gomonkey.ApplyFunc(time.Now, patchFnTime)
-	defer patchesTime.Reset()
-	// monkey patch uuid.NewString
-	patches := gomonkey.ApplyFuncReturn(uuid.NewString, "12345678-abcd-1234-abcd-ab1234567890")
-	defer patches.Reset()
-
-	tests := []struct {
-		name string
-		args args
-		want session
-	}{
-		// add test cases here
-		{
-			"test handleSession is generating new session if no cookie is set",
-			args{
-				httptest.NewRecorder(),
-				httptest.NewRequest("get", "/", strings.NewReader("Hello, Reader!")),
-				&sessions{},
-				wordDatabase{db: map[language]map[wordCollection]map[puzzle.Word]bool{
-					LANG_EN: {
-						WC_COMMON: {
-							puzzle.Word{'R', 'O', 'A', 'T', 'E'}: true,
-						},
-					},
-				}},
-			},
-			session{
-				id:                 "12345678-abcd-1234-abcd-ab1234567890",
-				expiresAt:          time.Unix(1615256178, 0).Add(SESSION_MAX_AGE_IN_SECONDS * time.Second),
-				maxAgeSeconds:      86400,
-				language:           LANG_EN,
-				activeSolutionWord: puzzle.Word{'R', 'O', 'A', 'T', 'E'},
-				pastWords:          []puzzle.Word{},
-			},
-		},
-		// {
-		// 	// todo // check out https://gist.github.com/jonnyreeves/17f91155a0d4a5d296d6 for inspiration
-		// 	"test got cookie but no session corresponding session on server",
-		// 	args{},
-		// 	session{
-		// 		id:            "12345678-abcd-1234-abcd-ab1234567890",
-		// 		expiresAt:     time.Unix(1615256178, 0).Add(SESSION_MAX_AGE_IN_SECONDS * time.Second),
-		// 		maxAgeSeconds: 120,
-		// 		activeWord:    word{'R','O','A','T','E'},
-		// 	},
-		// },
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := handleSession(tt.args.w, tt.args.req, tt.args.sessions, tt.args.wdb); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("handleSession() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-
-	// fmt.Println("")
-	// fmt.Println("foooooooooooooooo")
-	// fmt.Println("")
-
-	// t.Run("test", func(t *testing.T) {
-	// 	// t.Errorf("fail %v", session{})
-	// 	t.Errorf("fail %v", handleSession(httptest.NewRecorder(), httptest.NewRequest("get", "/", strings.NewReader("Hello, Reader!")), &sessions{}))
-	// })
-}
 
 func Test_parseForm(t *testing.T) {
 	type args struct {
 		p            puzzle.Puzzle
 		form         url.Values
 		solutionWord puzzle.Word
-		language     language
-		wdb          wordDatabase
+		language     language.Language
+		wdb          puzzle.WordDatabase
 	}
 	tests := []struct {
 		name    string
@@ -149,14 +31,14 @@ func Test_parseForm(t *testing.T) {
 				p:            puzzle.Puzzle{},
 				form:         url.Values{"r0": make([]string, 5)},
 				solutionWord: puzzle.Word{'M', 'I', 'S', 'S', 'S'},
-				language:     LANG_EN,
-				wdb: wordDatabase{db: map[language]map[wordCollection]map[puzzle.Word]bool{
-					LANG_EN: {
-						WC_COMMON: {
+				language:     language.LANG_EN,
+				wdb: puzzle.WordDatabase{Db: map[language.Language]map[puzzle.WordCollection]map[puzzle.Word]bool{
+					language.LANG_EN: {
+						puzzle.WC_COMMON: {
 							puzzle.Word{'m', 'i', 's', 's', 's'}: true,
 							puzzle.Word{0, 0, 0, 0, 0}:           true, // equals make([]string, 5)
 						},
-						WC_ALL: {
+						puzzle.WC_ALL: {
 							puzzle.Word{'m', 'i', 's', 's', 's'}: true,
 							puzzle.Word{0, 0, 0, 0, 0}:           true, // equals make([]string, 5)
 						},
@@ -182,13 +64,13 @@ func Test_parseForm(t *testing.T) {
 				p:            puzzle.Puzzle{},
 				form:         url.Values{"r0": []string{"M", "A", "T", "C", "H"}},
 				solutionWord: puzzle.Word{'M', 'A', 'T', 'C', 'H'},
-				language:     LANG_EN,
-				wdb: wordDatabase{db: map[language]map[wordCollection]map[puzzle.Word]bool{
-					LANG_EN: {
-						WC_COMMON: {
+				language:     language.LANG_EN,
+				wdb: puzzle.WordDatabase{Db: map[language.Language]map[puzzle.WordCollection]map[puzzle.Word]bool{
+					language.LANG_EN: {
+						puzzle.WC_COMMON: {
 							puzzle.Word{'m', 'a', 't', 'c', 'h'}: true,
 						},
-						WC_ALL: {
+						puzzle.WC_ALL: {
 							puzzle.Word{'m', 'a', 't', 'c', 'h'}: true,
 						},
 					},
@@ -337,83 +219,50 @@ func Test_evaluateGuessedWord(t *testing.T) {
 	}
 }
 
-func Test_sessions_updateOrSet(t *testing.T) {
-	type args struct {
-		sess session
-	}
-	tests := []struct {
-		name string
-		ss   *sessions
-		args args
-		want sessions
-	}{
-		{
-			"set new session",
-			&sessions{},
-			args{session{id: "foo"}},
-			sessions{session{id: "foo"}},
-		},
-		{
-			"update session",
-			&sessions{session{id: "foo", maxAgeSeconds: 1}},
-			args{session{id: "foo", maxAgeSeconds: 2}},
-			sessions{session{id: "foo", maxAgeSeconds: 2}},
-		},
-		{
-			"update session changes only correct session",
-			&sessions{session{id: "foo"}, session{id: "bar"}, session{id: "baz", maxAgeSeconds: 1}, session{id: "foobar"}},
-			args{session{id: "baz", maxAgeSeconds: 2}},
-			sessions{session{id: "foo"}, session{id: "bar"}, session{id: "baz", maxAgeSeconds: 2}, session{id: "foobar"}},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.ss.updateOrSet(tt.args.sess)
-			if !reflect.DeepEqual((*tt.ss), tt.want) {
-				t.Errorf("evaluateGuessedWord() = %v, want %v", tt.ss, tt.want)
-			}
-		})
-	}
-}
-
 // todo: test for ???:
 //   files, err := getAllFilenames(staticFS)
 //   log.Printf("  debug fsys:\n    %v\n    %s\n", files, err)
 
 func TestTemplateDataSuggest_validate(t *testing.T) {
 	type fields struct {
-		Word string
+		Word     string
+		Action   string
+		Language string
+		Message  string
 	}
 	tests := []struct {
 		name    string
 		fields  fields
-		wantErr bool
+		wantErr error
 	}{
-		{name: "Suggested word match", fields: fields{Word: "gamer"}, wantErr: false},
-		{name: "Suggested word match", fields: fields{Word: "GAMER"}, wantErr: false},
-		{name: "Suggested word match", fields: fields{Word: "preuß"}, wantErr: false},
-		{name: "Suggested word match", fields: fields{Word: "höste"}, wantErr: false},
-		{name: "Suggested word match", fields: fields{Word: "hÖste"}, wantErr: false},
-		{name: "Suggested word match", fields: fields{Word: "HÖSTE"}, wantErr: false},
-		{name: "Suggested word match", fields: fields{Word: "fülle"}, wantErr: false},
-		{name: "Suggested word match", fields: fields{Word: "FÜLLE"}, wantErr: false},
-		{name: "Suggested word match", fields: fields{Word: "größe"}, wantErr: false},
-		{name: "Suggested word match", fields: fields{Word: "GRÖßE"}, wantErr: false},
+		{name: "Suggested word match", fields: fields{Word: "gamer", Action: "add", Language: "english", Message: "test"}, wantErr: nil},
+		{name: "Suggested word match", fields: fields{Word: "GAMER", Action: "add", Language: "english", Message: "test"}, wantErr: nil},
+		{name: "Suggested word match", fields: fields{Word: "preuß", Action: "add", Language: "english", Message: "test"}, wantErr: nil},
+		{name: "Suggested word match", fields: fields{Word: "höste", Action: "add", Language: "english", Message: "test"}, wantErr: nil},
+		{name: "Suggested word match", fields: fields{Word: "hÖste", Action: "add", Language: "english", Message: "test"}, wantErr: nil},
+		{name: "Suggested word match", fields: fields{Word: "HÖSTE", Action: "add", Language: "english", Message: "test"}, wantErr: nil},
+		{name: "Suggested word match", fields: fields{Word: "fülle", Action: "add", Language: "english", Message: "test"}, wantErr: nil},
+		{name: "Suggested word match", fields: fields{Word: "FÜLLE", Action: "add", Language: "english", Message: "test"}, wantErr: nil},
+		{name: "Suggested word match", fields: fields{Word: "größe", Action: "add", Language: "english", Message: "test"}, wantErr: nil},
+		{name: "Suggested word match", fields: fields{Word: "GRÖßE", Action: "add", Language: "english", Message: "test"}, wantErr: nil},
 
-		{name: "Suggested word invalid (special chars: ?)", fields: fields{Word: "?????"}, wantErr: true},
-		{name: "Suggested word invalid (special chars: ô)", fields: fields{Word: "grôss"}, wantErr: true},
-		{name: "Suggested word invalid (special chars: emoji's (😁))", fields: fields{Word: "😁,😁,😁"}, wantErr: true},
-		{name: "Suggested word invalid (word to short en)", fields: fields{Word: "tiny"}, wantErr: true},
-		{name: "Suggested word invalid (word to short de)", fields: fields{Word: "kurz"}, wantErr: true},
-		{name: "Suggested word invalid (word to long en)", fields: fields{Word: "toolong"}, wantErr: true},
-		{name: "Suggested word invalid (word to long de)", fields: fields{Word: "zulang"}, wantErr: true},
+		{name: "Suggested word invalid (special chars: ?)", fields: fields{Word: "?????"}, wantErr: ErrFailedWordValidation},
+		{name: "Suggested word invalid (special chars: ô)", fields: fields{Word: "grôss"}, wantErr: ErrFailedWordValidation},
+		{name: "Suggested word invalid (special chars: emoji's (😁))", fields: fields{Word: "😁,😁,😁"}, wantErr: ErrFailedWordValidation},
+		{name: "Suggested word invalid (word to short en)", fields: fields{Word: "tiny"}, wantErr: ErrFailedWordValidation},
+		{name: "Suggested word invalid (word to short de)", fields: fields{Word: "kurz"}, wantErr: ErrFailedWordValidation},
+		{name: "Suggested word invalid (word to long en)", fields: fields{Word: "toolong"}, wantErr: ErrFailedWordValidation},
+		{name: "Suggested word invalid (word to long de)", fields: fields{Word: "zulang"}, wantErr: ErrFailedWordValidation},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tds := TemplateDataSuggest{
-				Word: tt.fields.Word,
+				Word:     tt.fields.Word,
+				Action:   tt.fields.Action,
+				Language: tt.fields.Language,
+				Message:  tt.fields.Message,
 			}
-			if err := tds.validate(); (err != nil) != tt.wantErr {
+			if err := tds.validate(); err != tt.wantErr {
 				t.Errorf("TemplateDataSuggest.validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

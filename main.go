@@ -115,23 +115,28 @@ type TemplateDataSuggest struct {
 
 var RegexpAllowedWordCharacters = regexp.MustCompile(`^[A-Za-zöäüÖÄÜß]{5}$`)
 
+var ErrFailedWordValidation = errors.New("validation failed: word is either to long, to short or contains forbidden characters")
+var ErrFailedMessageValidation = errors.New("validation failed: message contains invalid data")
+var ErrFailedActionValidation = errors.New("validation failed: action invalid")
+var ErrFailedLanguageValidation = errors.New("validation failed: language invalid")
+
 func (tds TemplateDataSuggest) validate() error {
 	if !RegexpAllowedWordCharacters.Match([]byte(tds.Word)) {
-		return fmt.Errorf("validation failed: %s", "word is either to long, to short or contains forbidden characters")
+		return ErrFailedWordValidation
 	}
 
 	p := bluemonday.UGCPolicy()
 	sm := p.Sanitize(tds.Message)
 	if sm != tds.Message {
-		return fmt.Errorf("validation failed: %s", "message contains invalid data")
+		return ErrFailedMessageValidation
 	}
 
 	if !slices.Contains([]string{"add", "remove"}, tds.Action) {
-		return fmt.Errorf("validation failed: %s", "action invalid")
+		return ErrFailedActionValidation
 	}
 
 	if tds.Language != "german" && tds.Language != "english" {
-		return fmt.Errorf("validation failed: %s", "language invalid")
+		return ErrFailedLanguageValidation
 	}
 
 	return nil
