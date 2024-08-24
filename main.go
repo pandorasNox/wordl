@@ -277,7 +277,7 @@ func main() {
 
 	mux.HandleFunc("GET /test", routes.TestPage(t))
 
-	mux.HandleFunc("GET /letter-hint", routes.LetterHint(t))
+	mux.HandleFunc("GET /letter-hint", routes.LetterHint(t, &sessions, wordDb))
 
 	mux.HandleFunc("GET /lettr", func(w http.ResponseWriter, r *http.Request) {
 		s := session.HandleSession(w, r, &sessions, wordDb)

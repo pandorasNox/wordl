@@ -16,6 +16,16 @@ func (w Word) String() string {
 	return out
 }
 
+func (w Word) ToSlice() []rune {
+	o := []rune{}
+
+	for _, v := range w {
+		o = append(o, v)
+	}
+
+	return o
+}
+
 func (w Word) Contains(letter rune) bool {
 	found := false
 	for _, v := range w {

@@ -23,6 +23,7 @@ type session struct {
 	maxAgeSeconds        int
 	language             language.Language
 	activeSolutionWord   puzzle.Word
+	letterHints          []rune
 	lastEvaluatedAttempt puzzle.Puzzle
 	pastWords            []puzzle.Word
 }
@@ -49,6 +50,14 @@ func (s *session) ActiveSolutionWord() puzzle.Word {
 
 func (s *session) SetActiveSolutionWord(w puzzle.Word) {
 	s.activeSolutionWord = w
+}
+
+func (s *session) LetterHints() []rune {
+	return s.letterHints
+}
+
+func (s *session) AddLetterHint(l rune) {
+	s.letterHints = append(s.letterHints, l)
 }
 
 func (s *session) LastEvaluatedAttempt() puzzle.Puzzle {
@@ -151,7 +160,7 @@ func generateSession(lang language.Language, wdb puzzle.WordDatabase) session { 
 		activeWord = puzzle.Word{'R', 'O', 'A', 'T', 'E'}.ToLower()
 	}
 
-	return session{id, expiresAt, SESSION_MAX_AGE_IN_SECONDS, lang, activeWord, puzzle.Puzzle{}, []puzzle.Word{}}
+	return session{id, expiresAt, SESSION_MAX_AGE_IN_SECONDS, lang, activeWord, []rune{}, puzzle.Puzzle{}, []puzzle.Word{}}
 }
 
 func generateSessionLifetime() time.Time {
