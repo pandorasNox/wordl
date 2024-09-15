@@ -25,6 +25,7 @@ import (
 	"github.com/pandorasNox/lettr/pkg/github"
 	"github.com/pandorasNox/lettr/pkg/language"
 	"github.com/pandorasNox/lettr/pkg/middleware"
+	"github.com/pandorasNox/lettr/pkg/notification"
 	"github.com/pandorasNox/lettr/pkg/puzzle"
 	"github.com/pandorasNox/lettr/pkg/routes"
 	"github.com/pandorasNox/lettr/pkg/session"
@@ -188,14 +189,6 @@ type keyboardKey struct {
 	Match  puzzle.Match
 }
 
-type Message string
-
-type TemplateDataMessages struct {
-	ErrMsgs     []Message
-	InfoMsgs    []Message
-	SuccessMsgs []Message
-}
-
 func Map[T, U any](ts []T, f func(T) U) []U {
 	us := make([]U, len(ts))
 	for i := range ts {
@@ -300,6 +293,7 @@ func main() {
 
 	mux.HandleFunc("POST /lettr", func(w http.ResponseWriter, r *http.Request) {
 		s := session.HandleSession(w, r, &sessions, wordDb)
+		notifier := notification.NewNotifier()
 
 		// b, err := io.ReadAll(r.Body)
 		// if err != nil {
@@ -313,9 +307,8 @@ func main() {
 			log.Printf("error: %s", err)
 
 			w.WriteHeader(422)
-			err = t.ExecuteTemplate(w, "oob-messages", TemplateDataMessages{
-				ErrMsgs: []Message{"cannot parse form data"},
-			})
+			notifier.AddError("cannot parse form data")
+			err = t.ExecuteTemplate(w, "oob-messages", notifier.ToTemplate())
 			if err != nil {
 				log.Printf("error t.ExecuteTemplate 'oob-messages': %s", err)
 			}
@@ -332,9 +325,8 @@ func main() {
 
 		if s.LastEvaluatedAttempt().ActiveRow() != countFilledFormRows(r.PostForm)-1 {
 			w.WriteHeader(422)
-			err = t.ExecuteTemplate(w, "oob-messages", TemplateDataMessages{
-				ErrMsgs: []Message{"faked rows"},
-			})
+			notifier.AddError("faked rows")
+			err = t.ExecuteTemplate(w, "oob-messages", notifier.ToTemplate())
 			if err != nil {
 				log.Printf("error t.ExecuteTemplate 'oob-messages': %s", err)
 			}
@@ -344,9 +336,8 @@ func main() {
 		p, err = parseForm(p, r.PostForm, s.ActiveSolutionWord(), s.Language(), wordDb)
 		if err == ErrNotInWordList {
 			w.WriteHeader(422)
-			err = t.ExecuteTemplate(w, "oob-messages", TemplateDataMessages{
-				ErrMsgs: []Message{"word not in word list"},
-			})
+			notifier.AddError("word not in word list")
+			err = t.ExecuteTemplate(w, "oob-messages", notifier.ToTemplate())
 			if err != nil {
 				log.Printf("error t.ExecuteTemplate 'oob-messages': %s", err)
 			}
@@ -434,16 +425,15 @@ func main() {
 	})
 
 	mux.HandleFunc("POST /suggest", func(w http.ResponseWriter, r *http.Request) {
-		var tdm TemplateDataMessages
+		notifier := notification.NewNotifier()
 
 		err := r.ParseForm()
 		if err != nil {
 			log.Printf("error: %s", err)
 
 			w.WriteHeader(422)
-			err = t.ExecuteTemplate(w, "oob-messages", TemplateDataMessages{
-				ErrMsgs: []Message{"can not parse form data"},
-			})
+			notifier.AddError("can not parse form data")
+			err = t.ExecuteTemplate(w, "oob-messages", notifier.ToTemplate())
 			if err != nil {
 				log.Printf("error t.ExecuteTemplate 'oob-messages': %s", err)
 			}
@@ -463,11 +453,8 @@ func main() {
 			w.WriteHeader(422)
 			w.Header().Add("HX-Reswap", "none")
 
-			tdm = TemplateDataMessages{
-				ErrMsgs: []Message{Message(err.Error())},
-			}
-
-			err = t.ExecuteTemplate(w, "oob-messages", tdm)
+			notifier.AddError(err.Error())
+			err = t.ExecuteTemplate(w, "oob-messages", notifier.ToTemplate())
 			if err != nil {
 				log.Printf("error t.ExecuteTemplate 'oob-messages' route: %s", err)
 			}
@@ -482,11 +469,8 @@ func main() {
 			w.WriteHeader(422)
 			w.Header().Add("HX-Reswap", "none")
 
-			tdm = TemplateDataMessages{
-				ErrMsgs: []Message{"Could not send suggestion."},
-			}
-
-			err = t.ExecuteTemplate(w, "oob-messages", tdm)
+			notifier.AddError("Could not send suggestion.")
+			err = t.ExecuteTemplate(w, "oob-messages", notifier.ToTemplate())
 			if err != nil {
 				log.Printf("error t.ExecuteTemplate 'oob-messages' route: %s", err)
 			}
@@ -494,10 +478,8 @@ func main() {
 			return
 		}
 
-		tdm = TemplateDataMessages{
-			SuccessMsgs: []Message{"Suggestion send, thank you!"},
-		}
-		err = t.ExecuteTemplate(w, "oob-messages", tdm)
+		notifier.AddSuccess("Suggestion send, thank you!")
+		err = t.ExecuteTemplate(w, "oob-messages", notifier.ToTemplate())
 		if err != nil {
 			log.Printf("error t.ExecuteTemplate 'oob-messages' route: %s", err)
 		}
