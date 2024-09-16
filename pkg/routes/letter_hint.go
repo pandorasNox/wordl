@@ -1,14 +1,14 @@
 package routes
 
 import (
-	"errors"
-	"fmt"
 	"html/template"
+	"log"
 	"math/rand"
 	"net/http"
 	"slices"
 	"time"
 
+	"github.com/pandorasNox/lettr/pkg/notification"
 	"github.com/pandorasNox/lettr/pkg/puzzle"
 	"github.com/pandorasNox/lettr/pkg/session"
 )
@@ -36,21 +36,23 @@ func Map[T, V any](ts []T, fn func(T) V) []V {
 	return result
 }
 
-func PickRandomRune(runeList []rune, randSrc rand.Source) (rune, error) {
+func PickRandomRune(runeList []rune, randSrc rand.Source) rune {
 	if len(runeList) == 0 {
-		return rune(0), errors.New("empty slice provided")
+		return rune(0)
 	}
 	if len(runeList) == 1 {
-		return runeList[0], nil
+		return runeList[0]
 	}
 
 	randgenerator := rand.New(randSrc)
 	randIndex := randgenerator.Intn(len(runeList))
 
-	return runeList[randIndex], nil
+	return runeList[randIndex]
 }
 
-func LetterHint(t *template.Template, sessions *session.Sessions, wdb puzzle.WordDatabase) func(w http.ResponseWriter, req *http.Request) {
+func LetterHint(t *template.Template, sessions *session.Sessions, wdb puzzle.WordDatabase) http.HandlerFunc {
+	notifier := notification.NewNotifier()
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		sess := session.HandleSession(w, r, sessions, wdb)
 
@@ -74,15 +76,19 @@ func LetterHint(t *template.Template, sessions *session.Sessions, wdb puzzle.Wor
 		})
 
 		randSrc := rand.NewSource(time.Now().UnixNano())
-		pick, err := PickRandomRune(hintOptions, randSrc)
-		if err != nil { // TODO: check also type of error...
-			w.Write([]byte("No more hints to provide"))
+		pick := PickRandomRune(hintOptions, randSrc)
+		if pick == rune(0) {
+			notifier.AddInfo("No more hints to provide")
+			err := t.ExecuteTemplate(w, "oob-messages", notifier.ToTemplate())
+			if err != nil {
+				log.Printf("error t.ExecuteTemplate 'oob-messages': %s", err)
+			}
 			return
 		}
 
 		sess.AddLetterHint(pick)
 		sessions.UpdateOrSet(sess)
 
-		w.Write([]byte(fmt.Sprintf("%c", pick)))
+		w.Write([]byte{byte(pick)})
 	}
 }
