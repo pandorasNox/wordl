@@ -51,9 +51,8 @@ func PickRandomRune(runeList []rune, randSrc rand.Source) rune {
 }
 
 func LetterHint(t *template.Template, sessions *session.Sessions, wdb puzzle.WordDatabase) http.HandlerFunc {
-	notifier := notification.NewNotifier()
-
 	return func(w http.ResponseWriter, r *http.Request) {
+		notifier := notification.NewNotifier()
 		sess := session.HandleSession(w, r, sessions, wdb)
 
 		solutionWord := sess.ActiveSolutionWord()

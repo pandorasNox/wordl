@@ -82,7 +82,7 @@
 {{ define "reveal-letter" }}
     <p>
         <span>hint: </span>
-        <span class="w-5 text-pink-500" id="letter-hints"></span>
+        <span class="w-5 text-pink-500" id="letter-hints">{{ .LetterHints }}</span>
     </p>
     <p>
         <button
@@ -99,7 +99,7 @@
 {{ define "show-solution" }}
     <p>
         <span>solution: </span>
-        <span class="text-pink-500" >{{ .Data.Debug }}</span>
+        <span class="text-pink-500" >{{ .SolutionWord }}</span>
     </p>
 {{ end }}
 

@@ -398,24 +398,7 @@ func main() {
 		}
 	})
 
-	mux.HandleFunc("POST /help", func(w http.ResponseWriter, r *http.Request) {
-		s := session.HandleSession(w, r, &sessions, wordDb)
-
-		p := s.LastEvaluatedAttempt()
-
-		sessions.UpdateOrSet(s)
-
-		p.Debug = s.ActiveSolutionWord().String()
-
-		fData := TemplateDataForm{}.New(s.Language(), p, s.PastWords(), s.ActiveSolutionWord().HasDublicateLetters())
-		fData.IsSolved = p.IsSolved()
-		fData.IsLoose = p.IsLoose()
-
-		err := t.ExecuteTemplate(w, "help", fData)
-		if err != nil {
-			log.Printf("error t.ExecuteTemplate '/help' route: %s", err)
-		}
-	})
+	mux.HandleFunc("POST /help", routes.Help(t, &sessions, wordDb))
 
 	mux.HandleFunc("GET /suggest", func(w http.ResponseWriter, r *http.Request) {
 		err := t.ExecuteTemplate(w, "suggest", TemplateDataSuggest{})
