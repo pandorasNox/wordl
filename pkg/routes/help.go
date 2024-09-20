@@ -12,7 +12,7 @@ import (
 type TemplateDataHelpPage struct {
 	SolutionWord                string
 	SolutionHasDublicateLetters bool
-	LetterHints                 string
+	LetterHints                 []rune
 	PastWords                   []puzzle.Word
 }
 
@@ -24,7 +24,7 @@ func Help(t *template.Template, sessions *session.Sessions, wdb puzzle.WordDatab
 		td := TemplateDataHelpPage{
 			SolutionWord:                s.ActiveSolutionWord().String(),
 			PastWords:                   s.PastWords(),
-			LetterHints:                 string(s.LetterHints()),
+			LetterHints:                 s.LetterHints(),
 			SolutionHasDublicateLetters: s.ActiveSolutionWord().HasDublicateLetters(),
 		}
 

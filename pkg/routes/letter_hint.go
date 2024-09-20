@@ -88,6 +88,9 @@ func LetterHint(t *template.Template, sessions *session.Sessions, wdb puzzle.Wor
 		sess.AddLetterHint(pick)
 		sessions.UpdateOrSet(sess)
 
-		w.Write([]byte{byte(pick)})
+		err := t.ExecuteTemplate(w, "single-letter-hint", pick)
+		if err != nil {
+			log.Printf("error t.ExecuteTemplate 'single-letter-hint': %s", err)
+		}
 	}
 }

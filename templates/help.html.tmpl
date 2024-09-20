@@ -80,9 +80,13 @@
 {{ end }}
 
 {{ define "reveal-letter" }}
-    <p>
+    <p class="mb-1">
         <span>hint: </span>
-        <span class="w-5 text-pink-500" id="letter-hints">{{ .LetterHints }}</span>
+        <span class="w-5 text-pink-500" id="letter-hints">
+            {{ range $letterHint := .LetterHints }}
+                {{ template "single-letter-hint" $letterHint }}
+            {{ end }}
+        </span>
     </p>
     <p>
         <button
@@ -94,6 +98,33 @@
             <span>get a letter</span>
         </button>
     </p>
+{{ end }}
+
+{{ define "single-letter-hint" }}
+    <span
+        class="
+            inline-block
+
+            caret-transparent
+            capitalize
+
+            border
+            rounded
+            border-gray-300
+            dark:border-gray-700
+
+            w-8
+            h-8
+
+            text-center
+            text-xl
+            text-pink-500
+
+            dark:placeholder-gray-400
+            dark:focus:ring-blue-500
+            dark:focus:border-blue-50
+        "
+    >{{ printf "%c" . }}</span>
 {{ end }}
 
 {{ define "show-solution" }}
