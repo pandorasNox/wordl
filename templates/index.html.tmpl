@@ -111,7 +111,13 @@
           <hr class="my-6 border-gray-200 sm:mx-auto dark:border-gray-700 lg:my-8" />
 
           <span class="block text-sm text-gray-500 text-center dark:text-gray-400">Made with HTMX</span>
-          <div class="my-10 text-center text-gray-200 dark:text-gray-700">Rev: <a href="https://github.com/pandorasNox/lettr/commit/{{ printf "%s" .Revision }}" target="_blank">{{ printf "%s" .Revision }}</a></div>
+          <div class="my-10 text-center text-gray-200 dark:text-gray-700">
+            <span>Rev: <a href="https://github.com/pandorasNox/lettr/commit/{{ printf "%s" .Revision }}" target="_blank">{{ printf "%s" .Revision }}</a></span>
+            {{ if .ImprintUrl }}
+              <span>|</span>
+              <span><a href="{{ printf "%s" .ImprintUrl }}">Imprint</a></span>
+            {{ end }}
+          </div>
       </div>
   </footer>
 

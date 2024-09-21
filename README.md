@@ -41,7 +41,7 @@
         * https://wortschatz.uni-leipzig.de/en/download/English
     * [x] fix past words display
     * [ ] add github action ci pipeline build + tests
-    * [ ] add imprint/link to imprint
+    * [x] add imprint/link to imprint
 - nice-to-have
     * [x] option for double letter hint
     * [ ] pick word dataset picker
@@ -57,7 +57,7 @@
                     * https://de.wiktionary.org/wiki/hund
             * openthesaurus (de only)
                 * https://www.openthesaurus.de/synonyme/search?q=test&format=application/json
-    * [ ] hint feature / give me one letter
+    * [x] hint feature / give me one letter
     * [ ] ui languge should also change
     * [ ] ESLint
     * [ ] http error codes:

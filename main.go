@@ -47,10 +47,19 @@ var ErrNotInWordList = errors.New("not in wordlist")
 type env struct {
 	port        string
 	githubToken string
+	imprintUrl  string
 }
 
 func (e env) String() string {
-	s := fmt.Sprintf("port: %s\ngithub token (length): %d\n", e.port, len(e.githubToken))
+	s := fmt.Sprintf("port: %s", e.port)
+
+	if e.githubToken != "" {
+		s = fmt.Sprintf("%s\ngithub token (length): %d", s, len(e.githubToken))
+	}
+
+	if e.imprintUrl != "" {
+		s = fmt.Sprintf("%s\nimprint: %s", s, e.imprintUrl)
+	}
 	// s = s + fmt.Sprintf("foo: %s\n", e.port)
 	return s
 }
@@ -88,9 +97,10 @@ type TemplateDataForm struct {
 	Keyboard                    keyboard
 	PastWords                   []puzzle.Word
 	SolutionHasDublicateLetters bool
+	ImprintUrl                  string
 }
 
-func (fd TemplateDataForm) New(l language.Language, p puzzle.Puzzle, pastWords []puzzle.Word, SolutionHasDublicateLetters bool) TemplateDataForm {
+func (fd TemplateDataForm) New(l language.Language, p puzzle.Puzzle, pastWords []puzzle.Word, solutionHasDublicateLetters bool, imprintUrl string) TemplateDataForm {
 	kb := keyboard{}
 	kb.Init(l, p.LetterGuesses())
 
@@ -103,7 +113,8 @@ func (fd TemplateDataForm) New(l language.Language, p puzzle.Puzzle, pastWords [
 		FaviconPath:                 FaviconPath,
 		Keyboard:                    kb,
 		PastWords:                   pastWords,
-		SolutionHasDublicateLetters: SolutionHasDublicateLetters,
+		SolutionHasDublicateLetters: solutionHasDublicateLetters,
+		ImprintUrl: imprintUrl,
 	}
 }
 
@@ -258,7 +269,7 @@ func main() {
 		p.Debug = sess.ActiveSolutionWord().String()
 		sessions.UpdateOrSet(sess)
 
-		fData := TemplateDataForm{}.New(sess.Language(), p, sess.PastWords(), sess.ActiveSolutionWord().HasDublicateLetters())
+		fData := TemplateDataForm{}.New(sess.Language(), p, sess.PastWords(), sess.ActiveSolutionWord().HasDublicateLetters(), envCfg.imprintUrl)
 		fData.IsSolved = p.IsSolved()
 		fData.IsLoose = p.IsLoose()
 
@@ -281,7 +292,7 @@ func main() {
 
 		p.Debug = s.ActiveSolutionWord().String()
 
-		fData := TemplateDataForm{}.New(s.Language(), p, s.PastWords(), s.ActiveSolutionWord().HasDublicateLetters())
+		fData := TemplateDataForm{}.New(s.Language(), p, s.PastWords(), s.ActiveSolutionWord().HasDublicateLetters(), envCfg.imprintUrl)
 		fData.IsSolved = p.IsSolved()
 		fData.IsLoose = p.IsLoose()
 
@@ -347,7 +358,7 @@ func main() {
 		s.SetLastEvaluatedAttempt(p)
 		sessions.UpdateOrSet(s)
 
-		fData := TemplateDataForm{}.New(s.Language(), p, s.PastWords(), s.ActiveSolutionWord().HasDublicateLetters())
+		fData := TemplateDataForm{}.New(s.Language(), p, s.PastWords(), s.ActiveSolutionWord().HasDublicateLetters(), envCfg.imprintUrl)
 		fData.IsSolved = p.IsSolved()
 		fData.IsLoose = p.IsLoose()
 
@@ -387,7 +398,7 @@ func main() {
 
 		p.Debug = s.ActiveSolutionWord().String()
 
-		fData := TemplateDataForm{}.New(s.Language(), p, s.PastWords(), s.ActiveSolutionWord().HasDublicateLetters())
+		fData := TemplateDataForm{}.New(s.Language(), p, s.PastWords(), s.ActiveSolutionWord().HasDublicateLetters(), envCfg.imprintUrl)
 		fData.IsSolved = p.IsSolved()
 		fData.IsLoose = p.IsLoose()
 
@@ -519,10 +530,15 @@ func envConfig() env {
 
 	gt, ok := os.LookupEnv("GITHUB_TOKEN")
 	if !ok {
-		panic("GITHUB_TOKEN not provided")
+		log.Printf("(optional) environment variable GITHUB_TOKEN not set")
 	}
 
-	return env{port: port, githubToken: gt}
+	imprintUrl, ok := os.LookupEnv("IMPRINT_URL")
+	if !ok {
+		log.Printf("(optional) environment variable IMPRINT_URL not set")
+	}
+
+	return env{port: port, githubToken: gt, imprintUrl: imprintUrl}
 }
 
 func countFilledFormRows(postPuzzleForm url.Values) uint8 {
