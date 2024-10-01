@@ -2,6 +2,9 @@
   "name": "lettr",
   "version": "0.1.0",
   "description": "lettr frontend",
+  "engines": {
+    "node": "20.12.1"
+  },
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
