@@ -66,7 +66,7 @@ func main() {
 	}
 	err := os.WriteFile("/tmp/dat1", []byte(out), 0644)
 	if err != nil {
-		log.Fatalf("failed writing file: %s", &err)
+		log.Fatalf("failed writing file: %s", err)
 	}
 }
 
