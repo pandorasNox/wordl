@@ -94,6 +94,7 @@ func Test_HandleSession(t *testing.T) {
 				maxAgeSeconds:        86400,
 				language:             language.LANG_EN,
 				activeSolutionWord:   puzzle.Word{'R', 'O', 'A', 'T', 'E'},
+				letterHints:          []rune{}, //TODO: understand why this is neccessary
 				lastEvaluatedAttempt: puzzle.Puzzle{},
 				pastWords:            []puzzle.Word{},
 			},
@@ -112,6 +113,9 @@ func Test_HandleSession(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// fmt.Printf("len=%d cap=%d %v\n", len(tt.want.letterHints), cap(tt.want.letterHints), tt.want.letterHints)
+			// got := HandleSession(tt.args.w, tt.args.req, tt.args.sessions, tt.args.wdb)
+			// fmt.Printf("len=%d cap=%d %v\n", len(got.letterHints), cap(got.letterHints), got.letterHints)
 			if got := HandleSession(tt.args.w, tt.args.req, tt.args.sessions, tt.args.wdb); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("handleSession() = %v, want %v", got, tt.want)
 			}
