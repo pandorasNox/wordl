@@ -17,7 +17,10 @@ type BodySize struct {
 func (bs *BodySize) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.ContentLength > bs.limitBytes {
 		w.WriteHeader(http.StatusRequestEntityTooLarge)
-		w.Write([]byte(http.ErrContentLength.Error() + " (ContentLength header)"))
+		_, err := w.Write([]byte(http.ErrContentLength.Error() + " (ContentLength header)"))
+		if err != nil {
+			log.Printf("unable to write to response writer: '%s' \n", err)
+		}
 		return
 	}
 
@@ -25,12 +28,19 @@ func (bs *BodySize) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	readBytes, err := io.ReadAll(limitedReader)
 	if len(readBytes) == int(bs.limitBytes+1) {
 		w.WriteHeader(http.StatusRequestEntityTooLarge)
-		w.Write([]byte(http.ErrContentLength.Error() + " (actual body)"))
+		_, err = w.Write([]byte(http.ErrContentLength.Error() + " (actual body)"))
+		if err != nil {
+			log.Printf("unable to write to response writer: '%s' \n", err)
+		}
 		return
 	}
 	if err != nil && err != io.EOF {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Bad request"))
+		_, err = w.Write([]byte("Bad request"))
+		if err != nil {
+			log.Printf("unable to write to response writer: '%s' \n", err)
+		}
+
 		log.Printf("body_size middleware error - bad request: '%s' \n", err)
 		return
 	}
