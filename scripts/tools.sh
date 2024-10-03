@@ -215,7 +215,9 @@ else
 
     if [ $1 == "test" ]
     then
-      func_exec_cli "go test ."
+      # func_exec_cli "go test -v ."
+      func_exec_cli "go test -v ./..."
+      # go test -run Test_HandleSession ./pkg/session
     fi
 
     if [ $1 == "bench" ]
