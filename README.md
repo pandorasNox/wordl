@@ -1,4 +1,4 @@
-![Project build and test status badge](https://github.com/pandorasNox/lettr/actions/workflows/go-build.yml/badge.svg)
+![Project build, test and lint status badge](https://github.com/pandorasNox/lettr/actions/workflows/go.yml/badge.svg)
 
 # lettr
 
