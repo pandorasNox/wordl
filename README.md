@@ -1,3 +1,5 @@
+![Project build and test status badge](https://github.com/pandorasNox/lettr/actions/workflows/go-build.yml/badge.svg)
+
 # lettr
 
 ## known issues
