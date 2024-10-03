@@ -41,6 +41,9 @@
         * https://wortschatz.uni-leipzig.de/en/download/English
     * [x] fix past words display
     * [ ] add github action ci pipeline build + tests
+        * [x] build
+        * [x] tests
+        * [ ] linting
     * [x] add imprint/link to imprint
 - nice-to-have
     * [x] option for double letter hint
