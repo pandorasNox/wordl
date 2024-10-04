@@ -114,7 +114,7 @@ func (fd TemplateDataForm) New(l language.Language, p puzzle.Puzzle, pastWords [
 		Keyboard:                    kb,
 		PastWords:                   pastWords,
 		SolutionHasDublicateLetters: solutionHasDublicateLetters,
-		ImprintUrl: imprintUrl,
+		ImprintUrl:                  imprintUrl,
 	}
 }
 
