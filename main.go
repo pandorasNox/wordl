@@ -6,10 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
-	"io"
 	"regexp"
 	"strings"
-	"sync"
 	"unicode"
 
 	iofs "io/fs"
@@ -62,11 +60,6 @@ func (e env) String() string {
 	}
 	// s = s + fmt.Sprintf("foo: %s\n", e.port)
 	return s
-}
-
-type counterState struct {
-	mu    sync.Mutex
-	count int
 }
 
 func NewLang(maybeLang string) (language.Language, error) {
@@ -482,24 +475,6 @@ func main() {
 		if err != nil {
 			log.Printf("error t.ExecuteTemplate '/suggest' route: %s", err)
 		}
-	})
-
-	counter := counterState{count: 0}
-	mux.HandleFunc("POST /counter", func(w http.ResponseWriter, req *http.Request) {
-		// handleSession(w, req, &sessions)
-		counter.mu.Lock()
-		counter.count++
-		defer counter.mu.Unlock()
-
-		b, err := io.ReadAll(req.Body)
-		if err != nil {
-			log.Fatalln(err)
-		}
-
-		log.Printf("Method: %s\nbody:\n%s", req.Method, b)
-
-		io.WriteString(w, fmt.Sprintf("<span>%d</span>", counter.count))
-
 	})
 
 	middlewares := []func(h http.Handler) http.Handler{
