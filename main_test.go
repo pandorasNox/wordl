@@ -131,11 +131,11 @@ func Test_evaluateGuessedWord(t *testing.T) {
 				solutionWord: puzzle.Word{'M', 'A', 'T', 'C', 'H'},
 			},
 			want: puzzle.WordGuess{
-				{'m', puzzle.MatchExact},
-				{'a', puzzle.MatchExact},
-				{'t', puzzle.MatchExact},
-				{'c', puzzle.MatchExact},
-				{'h', puzzle.MatchExact},
+				{Letter: 'm', Match: puzzle.MatchExact},
+				{Letter: 'a', Match: puzzle.MatchExact},
+				{Letter: 't', Match: puzzle.MatchExact},
+				{Letter: 'c', Match: puzzle.MatchExact},
+				{Letter: 'h', Match: puzzle.MatchExact},
 			},
 		},
 		{
@@ -145,11 +145,11 @@ func Test_evaluateGuessedWord(t *testing.T) {
 				solutionWord: puzzle.Word{'R', 'O', 'A', 'T', 'E'},
 			},
 			want: puzzle.WordGuess{
-				{'r', puzzle.MatchExact},
-				{'a', puzzle.MatchVague},
-				{'u', puzzle.MatchNone},
-				{'l', puzzle.MatchNone},
-				{'o', puzzle.MatchVague},
+				{Letter: 'r', Match: puzzle.MatchExact},
+				{Letter: 'a', Match: puzzle.MatchVague},
+				{Letter: 'u', Match: puzzle.MatchNone},
+				{Letter: 'l', Match: puzzle.MatchNone},
+				{Letter: 'o', Match: puzzle.MatchVague},
 			},
 		},
 		{
@@ -159,11 +159,11 @@ func Test_evaluateGuessedWord(t *testing.T) {
 				solutionWord: puzzle.Word{'R', 'O', 'A', 'T', 'E'},
 			},
 			want: puzzle.WordGuess{
-				{'r', puzzle.MatchExact},
-				{'o', puzzle.MatchExact},
-				{'t', puzzle.MatchVague},
-				{'o', puzzle.MatchNone}, // both false bec we already found it or even already guesst the exact match
-				{'r', puzzle.MatchNone}, // both false bec we already found it or even already guesst the exact match
+				{Letter: 'r', Match: puzzle.MatchExact},
+				{Letter: 'o', Match: puzzle.MatchExact},
+				{Letter: 't', Match: puzzle.MatchVague},
+				{Letter: 'o', Match: puzzle.MatchNone}, // both false bec we already found it or even already guesst the exact match
+				{Letter: 'r', Match: puzzle.MatchNone}, // both false bec we already found it or even already guesst the exact match
 			},
 		},
 		{
@@ -173,11 +173,11 @@ func Test_evaluateGuessedWord(t *testing.T) {
 				solutionWord: puzzle.Word{'L', 'X', 'I', 'I', 'I'},
 			},
 			want: puzzle.WordGuess{
-				{'i', puzzle.MatchNone},
-				{'x', puzzle.MatchExact},
-				{'i', puzzle.MatchExact},
-				{'i', puzzle.MatchExact},
-				{'i', puzzle.MatchExact},
+				{Letter: 'i', Match: puzzle.MatchNone},
+				{Letter: 'x', Match: puzzle.MatchExact},
+				{Letter: 'i', Match: puzzle.MatchExact},
+				{Letter: 'i', Match: puzzle.MatchExact},
+				{Letter: 'i', Match: puzzle.MatchExact},
 			},
 		},
 		{
@@ -187,11 +187,11 @@ func Test_evaluateGuessedWord(t *testing.T) {
 				solutionWord: puzzle.Word{'I', 'L', 'X', 'I', 'I'},
 			},
 			want: puzzle.WordGuess{
-				{'l', puzzle.MatchVague},
-				{'i', puzzle.MatchVague},
-				{'i', puzzle.MatchNone},
-				{'i', puzzle.MatchExact},
-				{'i', puzzle.MatchExact},
+				{Letter: 'l', Match: puzzle.MatchVague},
+				{Letter: 'i', Match: puzzle.MatchVague},
+				{Letter: 'i', Match: puzzle.MatchNone},
+				{Letter: 'i', Match: puzzle.MatchExact},
+				{Letter: 'i', Match: puzzle.MatchExact},
 			},
 		},
 		// {

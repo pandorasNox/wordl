@@ -16,7 +16,7 @@ type points []point
 func (ps points) String() string {
 	var r string
 	for _, p := range ps {
-		r += fmt.Sprintf("%s", p)
+		r += p.String()
 	}
 	return r
 }
