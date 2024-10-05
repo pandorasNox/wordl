@@ -45,7 +45,8 @@
     * [ ] add github action ci pipeline build + tests
         * [x] build
         * [x] tests
-        * [ ] linting
+        * [x] linting
+        * [ ] test image build
     * [x] add imprint/link to imprint
 - nice-to-have
     * [x] option for double letter hint
