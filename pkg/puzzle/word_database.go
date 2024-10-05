@@ -155,6 +155,7 @@ func FilePathsByLang() map[language.Language]map[WordCollection][]string {
 			},
 			WC_COMMON: {
 				"configs/corpora-eng_news_2023_10K-export.txt",
+				"configs/github.com.ajeetdsouza.clidle.words.go.txt",
 			},
 		},
 		language.LANG_DE: {
