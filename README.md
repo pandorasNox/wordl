@@ -42,11 +42,11 @@
         * https://api.wortschatz-leipzig.de/ws/swagger-ui/index.html#/Words/getWordInformation
         * https://wortschatz.uni-leipzig.de/en/download/English
     * [x] fix past words display
-    * [ ] add github action ci pipeline build + tests
+    * [x] add github action ci pipeline build + tests
         * [x] build
         * [x] tests
         * [x] linting
-        * [ ] test image build
+        * [x] test image build
     * [x] add imprint/link to imprint
 - nice-to-have
     * [x] option for double letter hint
