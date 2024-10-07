@@ -17,8 +17,9 @@
 * [x] trigger like quiz win/fail – requires: number of tries
 * [ ] refactoring
     * [x] rename wordle to `lettr` bec of trademark
+    * [x] use packages instead of everythiung in one file
+    * [ ] move leftover routing from main.go to routes packages
     * [ ] session handling
-    * [ ] use packages instead of everythiung in one file
 * [ ] check out https://github.com/torenware/vite-go
     * https://vitejs.dev/guide/backend-integration VS https://www.npmjs.com/package/webpack-assets-manifest
 
@@ -66,7 +67,7 @@
     * [x] hint feature / give me one letter
     * [ ] ui languge should also change
     * [ ] ESLint
-    * [ ] http error codes:
+    * [ ] http error codes: <!-- was this ment for additional middleware??? -->
         * [ ] 414 URI Too Long
         * [ ] 431 Request Header Fields Too Large (RFC 6585)
     * [ ] improve VS Code dev container
