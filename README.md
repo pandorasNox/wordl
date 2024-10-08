@@ -49,6 +49,7 @@
         * [x] linting
         * [x] test image build
     * [x] add imprint/link to imprint
+    * [ ] fix letter hints is not reset with new game bug
 - nice-to-have
     * [x] option for double letter hint
     * [ ] pick word dataset picker
