@@ -226,17 +226,14 @@ func main() {
 		"templates/pages/test.html.tmpl",
 	))
 
-	mux := http.NewServeMux()
-
 	staticFS, err := iofs.Sub(fs, "web/static")
 	if err != nil {
-		log.Fatalf("subtree for 'static' dir of embed fs failed: %s", err)
+		log.Fatalf("subtree for 'static' dir of embed fs failed: %s", err) //TODO
 	}
 
-	mux.Handle(
-		"GET /static/",
-		http.StripPrefix("/static", http.FileServer(http.FS(staticFS))),
-	)
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("GET /static/", routes.Static(staticFS))
 
 	mux.HandleFunc("GET /", func(w http.ResponseWriter, req *http.Request) {
 		sess := session.HandleSession(w, req, &sessions, wordDb)
