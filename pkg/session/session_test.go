@@ -29,7 +29,7 @@ func Test_ConstructCookie(t *testing.T) {
 		// add test cases here
 		{
 			"test_name",
-			args{session{fixedUuid, expireDate, SESSION_MAX_AGE_IN_SECONDS, language.LANG_EN, puzzle.Word{}, []rune{}, puzzle.Puzzle{}, []puzzle.Word{}}},
+			args{session{fixedUuid, expireDate, SESSION_MAX_AGE_IN_SECONDS, language.LANG_EN, puzzle.NewGame(language.LANG_EN, puzzle.WordDatabase{}, []puzzle.Word{}), puzzle.Word{}, []rune{}, puzzle.Puzzle{}, []puzzle.Word{}}},
 			http.Cookie{
 				Name:     SESSION_COOKIE_NAME,
 				Value:    fixedUuid,

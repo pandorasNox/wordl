@@ -328,6 +328,7 @@ func main() {
 		s.SetLastEvaluatedAttempt(p)
 		s.AddPastWord(s.ActiveSolutionWord())
 		s.SetActiveSolutionWord(wordDb.RandomPickWithFallback(l, s.PastWords(), 0))
+		s.NewGame(l, wordDb)
 		sessions.UpdateOrSet(s)
 
 		p.Debug = s.ActiveSolutionWord().String()
