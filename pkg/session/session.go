@@ -1,7 +1,6 @@
 package session
 
 import (
-	"log"
 	"net/http"
 	"slices"
 	"time"
@@ -23,9 +22,6 @@ type session struct {
 	maxAgeSeconds        int
 	language             language.Language
 	gameState            puzzle.GameState
-	activeSolutionWord   puzzle.Word
-	letterHints          []rune
-	lastEvaluatedAttempt puzzle.Puzzle
 	pastWords            []puzzle.Word
 }
 
@@ -45,61 +41,16 @@ func (s *session) SetLanguage(l language.Language) {
 	s.language = l
 }
 
-func (s *session) ActiveSolutionWord() puzzle.Word {
-	return s.activeSolutionWord
-}
-
-func (s *session) SetActiveSolutionWord(w puzzle.Word) {
-	s.activeSolutionWord = w
-}
-
 func (s *session) NewGame(l language.Language, wdb puzzle.WordDatabase) {
 	s.gameState = puzzle.NewGame(l, wdb, s.PastWords())
 }
 
-func (s *session) LetterHints() []rune {
-	return slices.Clone(s.letterHints)
+func (s *session) GameState() *puzzle.GameState {
+	return &s.gameState
 }
 
-func (s *session) AddLetterHint(l rune) {
-	s.letterHints = append(s.letterHints, l)
-}
-
-func (s *session) LastEvaluatedAttempt() puzzle.Puzzle {
-	return s.lastEvaluatedAttempt
-}
-
-func (s *session) SetLastEvaluatedAttempt(p puzzle.Puzzle) {
-	s.lastEvaluatedAttempt = p
-}
-
-type Sessions struct {
-	sessions []session
-}
-
-func NewSessions() Sessions {
-	return Sessions{}
-}
-
-func (ss Sessions) String() string {
-	out := ""
-	for _, s := range ss.sessions {
-		out = out + s.id + " " + s.expiresAt.String() + "\n"
-	}
-
-	return out
-}
-
-func (ss *Sessions) UpdateOrSet(sess session) {
-	index := slices.IndexFunc((ss.sessions), func(s session) bool {
-		return s.id == sess.id
-	})
-	if index == -1 {
-		ss.sessions = append(ss.sessions, sess)
-		return
-	}
-
-	(ss.sessions)[index] = sess
+func (s *session) SetGameState(g puzzle.GameState) {
+	s.gameState = g
 }
 
 func HandleSession(w http.ResponseWriter, req *http.Request, sessions *Sessions, wdb puzzle.WordDatabase) session {
@@ -158,14 +109,8 @@ func ConstructCookie(s session) http.Cookie {
 func generateSession(lang language.Language, wdb puzzle.WordDatabase) session { //todo: pass it by ref not by copy?
 	id := uuid.NewString()
 	expiresAt := generateSessionLifetime()
-	activeWord, err := wdb.RandomPick(lang, []puzzle.Word{}, 0)
-	if err != nil {
-		log.Printf("pick random word failed: %s", err)
 
-		activeWord = puzzle.Word{'R', 'O', 'A', 'T', 'E'}.ToLower()
-	}
-
-	return session{id, expiresAt, SESSION_MAX_AGE_IN_SECONDS, lang, puzzle.NewGame(lang, wdb, []puzzle.Word{}), activeWord, []rune{}, puzzle.Puzzle{}, []puzzle.Word{}}
+	return session{id, expiresAt, SESSION_MAX_AGE_IN_SECONDS, lang, puzzle.NewGame(lang, wdb, []puzzle.Word{}), []puzzle.Word{}}
 }
 
 func generateSessionLifetime() time.Time {

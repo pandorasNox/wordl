@@ -78,7 +78,7 @@ func Test_parseForm(t *testing.T) {
 					},
 				}},
 			},
-			want: puzzle.Puzzle{Debug: "", Guesses: [6]puzzle.WordGuess{
+			want: puzzle.Puzzle{Guesses: [6]puzzle.WordGuess{
 				{
 					{Letter: 'm', Match: puzzle.MatchExact},
 					{Letter: 'a', Match: puzzle.MatchExact},

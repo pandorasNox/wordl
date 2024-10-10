@@ -29,7 +29,7 @@ func Test_ConstructCookie(t *testing.T) {
 		// add test cases here
 		{
 			"test_name",
-			args{session{fixedUuid, expireDate, SESSION_MAX_AGE_IN_SECONDS, language.LANG_EN, puzzle.NewGame(language.LANG_EN, puzzle.WordDatabase{}, []puzzle.Word{}), puzzle.Word{}, []rune{}, puzzle.Puzzle{}, []puzzle.Word{}}},
+			args{session{fixedUuid, expireDate, SESSION_MAX_AGE_IN_SECONDS, language.LANG_EN, puzzle.NewGame(language.LANG_EN, puzzle.WordDatabase{}, []puzzle.Word{}), []puzzle.Word{}}},
 			http.Cookie{
 				Name:     SESSION_COOKIE_NAME,
 				Value:    fixedUuid,
@@ -68,6 +68,14 @@ func Test_HandleSession(t *testing.T) {
 	patches := gomonkey.ApplyFuncReturn(uuid.NewString, "12345678-abcd-1234-abcd-ab1234567890")
 	defer patches.Reset()
 
+	mockWordDatabase := puzzle.WordDatabase{Db: map[language.Language]map[puzzle.WordCollection]map[puzzle.Word]bool{
+		language.LANG_EN: {
+			puzzle.WC_COMMON: {
+				puzzle.Word{'R', 'O', 'A', 'T', 'E'}: true,
+			},
+		},
+	}}
+
 	tests := []struct {
 		name string
 		args args
@@ -80,22 +88,18 @@ func Test_HandleSession(t *testing.T) {
 				httptest.NewRecorder(),
 				httptest.NewRequest("get", "/", strings.NewReader("Hello, Reader!")),
 				&Sessions{},
-				puzzle.WordDatabase{Db: map[language.Language]map[puzzle.WordCollection]map[puzzle.Word]bool{
-					language.LANG_EN: {
-						puzzle.WC_COMMON: {
-							puzzle.Word{'R', 'O', 'A', 'T', 'E'}: true,
-						},
-					},
-				}},
+				mockWordDatabase,
 			},
 			session{
 				id:                   "12345678-abcd-1234-abcd-ab1234567890",
 				expiresAt:            time.Unix(1615256178, 0).Add(SESSION_MAX_AGE_IN_SECONDS * time.Second),
 				maxAgeSeconds:        86400,
 				language:             language.LANG_EN,
-				activeSolutionWord:   puzzle.Word{'R', 'O', 'A', 'T', 'E'},
-				letterHints:          []rune{}, //TODO: understand why this is neccessary
-				lastEvaluatedAttempt: puzzle.Puzzle{},
+				gameState:            puzzle.NewGame(
+					language.LANG_EN,
+					mockWordDatabase,
+					[]puzzle.Word{},
+				),
 				pastWords:            []puzzle.Word{},
 			},
 		},

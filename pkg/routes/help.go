@@ -19,13 +19,14 @@ type TemplateDataHelpPage struct {
 func Help(t *template.Template, sessions *session.Sessions, wdb puzzle.WordDatabase) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := session.HandleSession(w, r, sessions, wdb)
+		g := s.GameState()
 		sessions.UpdateOrSet(s)
 
 		td := TemplateDataHelpPage{
-			SolutionWord:                s.ActiveSolutionWord().String(),
+			SolutionWord:                g.ActiveSolutionWord().String(),
 			PastWords:                   s.PastWords(),
-			LetterHints:                 s.LetterHints(),
-			SolutionHasDublicateLetters: s.ActiveSolutionWord().HasDublicateLetters(),
+			LetterHints:                 g.LetterHints(),
+			SolutionHasDublicateLetters: g.ActiveSolutionWord().HasDublicateLetters(),
 		}
 
 		err := t.ExecuteTemplate(w, "help", td)

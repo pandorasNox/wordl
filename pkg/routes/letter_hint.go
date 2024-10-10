@@ -54,9 +54,10 @@ func LetterHint(t *template.Template, sessions *session.Sessions, wdb puzzle.Wor
 	return func(w http.ResponseWriter, r *http.Request) {
 		notifier := notification.NewNotifier()
 		sess := session.HandleSession(w, r, sessions, wdb)
+		gameState := sess.GameState()
 
-		solutionWord := sess.ActiveSolutionWord()
-		lg := sess.LastEvaluatedAttempt().LetterGuesses()
+		solutionWord := gameState.ActiveSolutionWord()
+		lg := gameState.LastEvaluatedAttempt().LetterGuesses()
 
 		matchedLetter := FilterFunc(lg, func(l puzzle.LetterGuess) bool {
 			return l.Match.Is(puzzle.MatchExact) || l.Match.Is(puzzle.MatchVague)
@@ -69,7 +70,7 @@ func LetterHint(t *template.Template, sessions *session.Sessions, wdb puzzle.Wor
 			return !slices.Contains(matchedRunes, l)
 		})
 
-		lhs := sess.LetterHints()
+		lhs := gameState.LetterHints()
 		hintOptions := FilterFunc(notFoundLetters, func(l rune) bool {
 			return !slices.Contains(lhs, l)
 		})
@@ -85,7 +86,7 @@ func LetterHint(t *template.Template, sessions *session.Sessions, wdb puzzle.Wor
 			return
 		}
 
-		sess.AddLetterHint(pick)
+		gameState.AddLetterHint(pick)
 		sessions.UpdateOrSet(sess)
 
 		err := t.ExecuteTemplate(w, "single-letter-hint", pick)
