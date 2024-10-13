@@ -7,7 +7,6 @@ import (
 )
 
 type GameState struct {
-	puzzle               Puzzle
 	activeSolutionWord   Word
 	letterHints          []rune
 	lastEvaluatedAttempt Puzzle
@@ -17,7 +16,6 @@ func NewGame(l language.Language, wdb WordDatabase, excludeWords []Word) GameSta
 	newSolutionWord := wdb.RandomPickWithFallback(l, excludeWords, 0)
 
 	return GameState{
-		puzzle:               Puzzle{},
 		activeSolutionWord:   newSolutionWord,
 		letterHints:          []rune{},
 		lastEvaluatedAttempt: Puzzle{},
