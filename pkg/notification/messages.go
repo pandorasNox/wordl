@@ -5,9 +5,9 @@ import "slices"
 type message string
 
 type notifier struct {
-	errorMsgs	[]message
-	infoMsgs	[]message
-	successMsgs	[]message
+	errorMsgs   []message
+	infoMsgs    []message
+	successMsgs []message
 }
 
 func NewNotifier() notifier {

@@ -91,16 +91,16 @@ func Test_HandleSession(t *testing.T) {
 				mockWordDatabase,
 			},
 			session{
-				id:                   "12345678-abcd-1234-abcd-ab1234567890",
-				expiresAt:            time.Unix(1615256178, 0).Add(SESSION_MAX_AGE_IN_SECONDS * time.Second),
-				maxAgeSeconds:        86400,
-				language:             language.LANG_EN,
-				gameState:            puzzle.NewGame(
+				id:            "12345678-abcd-1234-abcd-ab1234567890",
+				expiresAt:     time.Unix(1615256178, 0).Add(SESSION_MAX_AGE_IN_SECONDS * time.Second),
+				maxAgeSeconds: 86400,
+				language:      language.LANG_EN,
+				gameState: puzzle.NewGame(
 					language.LANG_EN,
 					mockWordDatabase,
 					[]puzzle.Word{},
 				),
-				pastWords:            []puzzle.Word{},
+				pastWords: []puzzle.Word{},
 			},
 		},
 		// {

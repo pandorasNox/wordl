@@ -17,12 +17,12 @@ const SESSION_MAX_AGE_IN_SECONDS = 24 * 60 * 60
 
 type session struct {
 	// todo: think about using mutex or channel for rw session
-	id                   string
-	expiresAt            time.Time
-	maxAgeSeconds        int
-	language             language.Language
-	gameState            puzzle.GameState
-	pastWords            []puzzle.Word
+	id            string
+	expiresAt     time.Time
+	maxAgeSeconds int
+	language      language.Language
+	gameState     puzzle.GameState
+	pastWords     []puzzle.Word
 }
 
 func (s *session) AddPastWord(w puzzle.Word) {
