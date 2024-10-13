@@ -5,16 +5,15 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
-	"strings"
-	"unicode"
-
 	iofs "io/fs"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"slices"
+	"strings"
 	"time"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/pandorasNox/lettr/pkg/language"

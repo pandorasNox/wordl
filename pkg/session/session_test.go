@@ -152,21 +152,21 @@ func TestSessions_UpdateOrSet(t *testing.T) {
 			args{session{id: "foo"}},
 			Sessions{
 				sessions: []session{
-					session{id: "foo"},
+					{id: "foo"},
 				},
 			},
 		},
 		{
 			"update session",
-			&Sessions{[]session{session{id: "foo", maxAgeSeconds: 1}}},
+			&Sessions{[]session{{id: "foo", maxAgeSeconds: 1}}},
 			args{session{id: "foo", maxAgeSeconds: 2}},
-			Sessions{[]session{session{id: "foo", maxAgeSeconds: 2}}},
+			Sessions{[]session{{id: "foo", maxAgeSeconds: 2}}},
 		},
 		{
 			"update session changes only correct session",
-			&Sessions{[]session{session{id: "foo"}, session{id: "bar"}, session{id: "baz", maxAgeSeconds: 1}, session{id: "foobar"}}},
+			&Sessions{[]session{{id: "foo"}, {id: "bar"}, {id: "baz", maxAgeSeconds: 1}, {id: "foobar"}}},
 			args{session{id: "baz", maxAgeSeconds: 2}},
-			Sessions{[]session{session{id: "foo"}, session{id: "bar"}, session{id: "baz", maxAgeSeconds: 2}, session{id: "foobar"}}},
+			Sessions{[]session{{id: "foo"}, {id: "bar"}, {id: "baz", maxAgeSeconds: 2}, {id: "foobar"}}},
 		},
 	}
 	for _, tt := range tests {

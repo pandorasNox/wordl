@@ -1,5 +1,7 @@
 $schema: "https://golangci-lint.run/jsonschema/golangci.jsonschema.json"
 
 linters:
+  disable:
+    - "gofumpt"
   presets:
     - "format"
