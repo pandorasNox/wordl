@@ -8,10 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"time"
-	"unicode"
 
-	"github.com/pandorasNox/lettr/pkg/language"
 	"github.com/pandorasNox/lettr/pkg/middleware"
 	"github.com/pandorasNox/lettr/pkg/puzzle"
 	"github.com/pandorasNox/lettr/pkg/routes"
@@ -49,107 +46,11 @@ func (e env) String() string {
 	return s
 }
 
-func NewLang(maybeLang string) (language.Language, error) {
-	switch language.Language(maybeLang) {
-	case language.LANG_EN, language.LANG_DE:
-		return language.Language(maybeLang), nil
-	default:
-		return language.LANG_EN, fmt.Errorf("couldn't create new language from given value: '%s'", maybeLang)
-	}
-}
-
 // inspiration see: https://forum.golangbridge.org/t/can-i-use-enum-in-template/25296
 var funcMap = template.FuncMap{
 	"IsMatchVague": puzzle.MatchVague.Is,
 	"IsMatchNone":  puzzle.MatchNone.Is,
 	"IsMatchExact": puzzle.MatchExact.Is,
-}
-
-type TemplateDataForm struct {
-	Data                        puzzle.Puzzle
-	Errors                      map[string]string
-	IsSolved                    bool
-	IsLoose                     bool
-	JSCachePurgeTimestamp       int64
-	Language                    language.Language
-	Revision                    string
-	FaviconPath                 string
-	Keyboard                    keyboard
-	PastWords                   []puzzle.Word
-	SolutionHasDublicateLetters bool
-	ImprintUrl                  string
-}
-
-func (fd TemplateDataForm) New(l language.Language, p puzzle.Puzzle, pastWords []puzzle.Word, solutionHasDublicateLetters bool, imprintUrl string) TemplateDataForm {
-	kb := keyboard{}
-	kb.Init(l, p.LetterGuesses())
-
-	return TemplateDataForm{
-		Data:                        p,
-		Errors:                      make(map[string]string),
-		JSCachePurgeTimestamp:       time.Now().Unix(),
-		Language:                    l,
-		Revision:                    Revision,
-		FaviconPath:                 FaviconPath,
-		Keyboard:                    kb,
-		PastWords:                   pastWords,
-		SolutionHasDublicateLetters: solutionHasDublicateLetters,
-		ImprintUrl:                  imprintUrl,
-	}
-}
-
-type keyboard struct {
-	KeyGrid [][]keyboardKey
-}
-
-func (k *keyboard) Init(l language.Language, lgs []puzzle.LetterGuess) {
-	k.KeyGrid = [][]keyboardKey{
-		{{"Q", false, puzzle.MatchNone}, {"W", false, puzzle.MatchNone}, {"E", false, puzzle.MatchNone}, {"R", false, puzzle.MatchNone}, {"T", false, puzzle.MatchNone}, {"Y", false, puzzle.MatchNone}, {"U", false, puzzle.MatchNone}, {"I", false, puzzle.MatchNone}, {"O", false, puzzle.MatchNone}, {"P", false, puzzle.MatchNone}, {"Delete", false, puzzle.MatchNone}},
-		{{"A", false, puzzle.MatchNone}, {"S", false, puzzle.MatchNone}, {"D", false, puzzle.MatchNone}, {"F", false, puzzle.MatchNone}, {"G", false, puzzle.MatchNone}, {"H", false, puzzle.MatchNone}, {"J", false, puzzle.MatchNone}, {"K", false, puzzle.MatchNone}, {"L", false, puzzle.MatchNone}, {"Enter", false, puzzle.MatchNone}},
-		{{"Z", false, puzzle.MatchNone}, {"X", false, puzzle.MatchNone}, {"C", false, puzzle.MatchNone}, {"V", false, puzzle.MatchNone}, {"B", false, puzzle.MatchNone}, {"N", false, puzzle.MatchNone}, {"M", false, puzzle.MatchNone}},
-	}
-
-	for ri, r := range k.KeyGrid {
-	KeyLoop:
-		for ki, kk := range r {
-			for _, lg := range lgs {
-				if kk.Key == "Enter" || kk.Key == "Delete" {
-					continue KeyLoop
-				}
-
-				KeyR := firstRune(kk.Key)
-				betterMatch := (k.KeyGrid[ri][ki].Match == puzzle.MatchNone) ||
-					(k.KeyGrid[ri][ki].Match == puzzle.MatchVague && lg.Match == puzzle.MatchExact)
-
-				if lg.Letter == unicode.ToLower(KeyR) && betterMatch {
-					k.KeyGrid[ri][ki].IsUsed = true
-					k.KeyGrid[ri][ki].Match = lg.Match
-				}
-			}
-		}
-	}
-}
-
-func firstRune(s string) rune {
-	for _, r := range s {
-		return r
-	}
-
-	return 0
-}
-
-type keyboardKey struct {
-	Key    string
-	IsUsed bool
-	Match  puzzle.Match
-}
-
-func Map[T, U any](ts []T, f func(T) U) []U {
-	us := make([]U, len(ts))
-	for i := range ts {
-		us[i] = f(ts[i])
-	}
-	return us
 }
 
 func main() {
@@ -186,21 +87,7 @@ func main() {
 
 	mux.HandleFunc("GET /static/", routes.Static(staticFS))
 
-	mux.HandleFunc("GET /", func(w http.ResponseWriter, req *http.Request) {
-		sess := session.HandleSession(w, req, &sessions, wordDb)
-
-		p := sess.GameState().LastEvaluatedAttempt()
-		sessions.UpdateOrSet(sess)
-
-		fData := TemplateDataForm{}.New(sess.Language(), p, sess.PastWords(), sess.GameState().ActiveSolutionWord().HasDublicateLetters(), envCfg.imprintUrl)
-		fData.IsSolved = p.IsSolved()
-		fData.IsLoose = p.IsLoose()
-
-		err := t.ExecuteTemplate(w, "index.html.tmpl", fData)
-		if err != nil {
-			log.Printf("error t.Execute '/' route: %s", err)
-		}
-	})
+	mux.HandleFunc("GET /", routes.Index(t, &sessions, wordDb, envCfg.imprintUrl, Revision, FaviconPath))
 
 	mux.HandleFunc("GET /test", routes.TestPage(t))
 
@@ -210,44 +97,7 @@ func main() {
 
 	mux.HandleFunc("POST /lettr", routes.PostLettr(t, &sessions, wordDb, envCfg.imprintUrl, Revision, FaviconPath))
 
-	mux.HandleFunc("POST /new", func(w http.ResponseWriter, r *http.Request) {
-		s := session.HandleSession(w, r, &sessions, wordDb)
-
-		// handle lang switch
-		l := s.Language()
-		maybeLang := r.FormValue("lang")
-		if maybeLang != "" {
-			l, _ = NewLang(maybeLang)
-			s.SetLanguage(l)
-
-			type TemplateDataLanguge struct {
-				Language language.Language
-			}
-			tData := TemplateDataLanguge{Language: l}
-
-			err := t.ExecuteTemplate(w, "oob-lang-switch", tData)
-			if err != nil {
-				log.Printf("error t.ExecuteTemplate '/new' route: %s", err)
-			}
-		}
-
-		p := puzzle.Puzzle{}
-
-		s.AddPastWord(s.GameState().ActiveSolutionWord())
-		s.NewGame(l, wordDb)
-		sessions.UpdateOrSet(s)
-
-		g := s.GameState()
-		fData := TemplateDataForm{}.New(s.Language(), p, s.PastWords(), g.ActiveSolutionWord().HasDublicateLetters(), envCfg.imprintUrl)
-		fData.IsSolved = p.IsSolved()
-		fData.IsLoose = p.IsLoose()
-
-		// w.Header().Add("HX-Refresh", "true")
-		err := t.ExecuteTemplate(w, "lettr-form", fData)
-		if err != nil {
-			log.Printf("error t.ExecuteTemplate '/new' route: %s", err)
-		}
-	})
+	mux.HandleFunc("POST /new", routes.PostNew(t, &sessions, wordDb, envCfg.imprintUrl, Revision, FaviconPath))
 
 	mux.HandleFunc("POST /help", routes.Help(t, &sessions, wordDb))
 

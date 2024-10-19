@@ -9,104 +9,16 @@ import (
 	"net/url"
 	"slices"
 	"strings"
-	"time"
-	"unicode"
 	"unicode/utf8"
 
 	"github.com/pandorasNox/lettr/pkg/language"
 	"github.com/pandorasNox/lettr/pkg/notification"
 	"github.com/pandorasNox/lettr/pkg/puzzle"
+	"github.com/pandorasNox/lettr/pkg/routes/models/shared"
 	"github.com/pandorasNox/lettr/pkg/session"
 )
 
 var ErrNotInWordList = errors.New("not in wordlist")
-
-type TemplateDataLettrForm struct {
-	Data                        puzzle.Puzzle
-	Errors                      map[string]string
-	IsSolved                    bool
-	IsLoose                     bool
-	JSCachePurgeTimestamp       int64
-	Language                    language.Language
-	Revision                    string
-	FaviconPath                 string
-	Keyboard                    keyboard
-	PastWords                   []puzzle.Word
-	SolutionHasDublicateLetters bool
-	ImprintUrl                  string
-}
-
-func (fd TemplateDataLettrForm) New(
-	l language.Language,
-	p puzzle.Puzzle,
-	pastWords []puzzle.Word,
-	solutionHasDublicateLetters bool,
-	imprintUrl string,
-	revision string,
-	faviconPath string,
-) TemplateDataLettrForm {
-	kb := keyboard{}
-	kb.Init(l, p.LetterGuesses())
-
-	return TemplateDataLettrForm{
-		Data:                        p,
-		Errors:                      make(map[string]string),
-		JSCachePurgeTimestamp:       time.Now().Unix(),
-		Language:                    l,
-		Revision:                    revision,
-		FaviconPath:                 faviconPath,
-		Keyboard:                    kb,
-		PastWords:                   pastWords,
-		SolutionHasDublicateLetters: solutionHasDublicateLetters,
-		ImprintUrl:                  imprintUrl,
-	}
-}
-
-type keyboard struct {
-	KeyGrid [][]keyboardKey
-}
-
-func (k *keyboard) Init(l language.Language, lgs []puzzle.LetterGuess) {
-	k.KeyGrid = [][]keyboardKey{
-		{{"Q", false, puzzle.MatchNone}, {"W", false, puzzle.MatchNone}, {"E", false, puzzle.MatchNone}, {"R", false, puzzle.MatchNone}, {"T", false, puzzle.MatchNone}, {"Y", false, puzzle.MatchNone}, {"U", false, puzzle.MatchNone}, {"I", false, puzzle.MatchNone}, {"O", false, puzzle.MatchNone}, {"P", false, puzzle.MatchNone}, {"Delete", false, puzzle.MatchNone}},
-		{{"A", false, puzzle.MatchNone}, {"S", false, puzzle.MatchNone}, {"D", false, puzzle.MatchNone}, {"F", false, puzzle.MatchNone}, {"G", false, puzzle.MatchNone}, {"H", false, puzzle.MatchNone}, {"J", false, puzzle.MatchNone}, {"K", false, puzzle.MatchNone}, {"L", false, puzzle.MatchNone}, {"Enter", false, puzzle.MatchNone}},
-		{{"Z", false, puzzle.MatchNone}, {"X", false, puzzle.MatchNone}, {"C", false, puzzle.MatchNone}, {"V", false, puzzle.MatchNone}, {"B", false, puzzle.MatchNone}, {"N", false, puzzle.MatchNone}, {"M", false, puzzle.MatchNone}},
-	}
-
-	for ri, r := range k.KeyGrid {
-	KeyLoop:
-		for ki, kk := range r {
-			for _, lg := range lgs {
-				if kk.Key == "Enter" || kk.Key == "Delete" {
-					continue KeyLoop
-				}
-
-				KeyR := firstRune(kk.Key)
-				betterMatch := (k.KeyGrid[ri][ki].Match == puzzle.MatchNone) ||
-					(k.KeyGrid[ri][ki].Match == puzzle.MatchVague && lg.Match == puzzle.MatchExact)
-
-				if lg.Letter == unicode.ToLower(KeyR) && betterMatch {
-					k.KeyGrid[ri][ki].IsUsed = true
-					k.KeyGrid[ri][ki].Match = lg.Match
-				}
-			}
-		}
-	}
-}
-
-func firstRune(s string) rune {
-	for _, r := range s {
-		return r
-	}
-
-	return 0
-}
-
-type keyboardKey struct {
-	Key    string
-	IsUsed bool
-	Match  puzzle.Match
-}
 
 func GetLettr(t *template.Template, sessions *session.Sessions, wdb puzzle.WordDatabase, imprintUrl string, revision string, faviconPath string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -115,7 +27,7 @@ func GetLettr(t *template.Template, sessions *session.Sessions, wdb puzzle.WordD
 
 		p := s.GameState().LastEvaluatedAttempt()
 
-		fData := TemplateDataLettrForm{}.New(
+		fData := shared.TemplateDataLettr{}.New(
 			s.Language(),
 			p,
 			s.PastWords(),
@@ -192,7 +104,7 @@ func PostLettr(t *template.Template, sessions *session.Sessions, wdb puzzle.Word
 		s.SetGameState(*g) //todo move gamestate from pointer to copy
 		sessions.UpdateOrSet(s)
 
-		fData := TemplateDataLettrForm{}.New(s.Language(), p, s.PastWords(), g.ActiveSolutionWord().HasDublicateLetters(), imprintUrl, revision, faviconPath)
+		fData := shared.TemplateDataLettr{}.New(s.Language(), p, s.PastWords(), g.ActiveSolutionWord().HasDublicateLetters(), imprintUrl, revision, faviconPath)
 		fData.IsSolved = p.IsSolved()
 		fData.IsLoose = p.IsLoose()
 

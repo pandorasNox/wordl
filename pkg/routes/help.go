@@ -6,15 +6,9 @@ import (
 	"net/http"
 
 	"github.com/pandorasNox/lettr/pkg/puzzle"
+	"github.com/pandorasNox/lettr/pkg/routes/models"
 	"github.com/pandorasNox/lettr/pkg/session"
 )
-
-type TemplateDataHelpPage struct {
-	SolutionWord                string
-	SolutionHasDublicateLetters bool
-	LetterHints                 []rune
-	PastWords                   []puzzle.Word
-}
 
 func Help(t *template.Template, sessions *session.Sessions, wdb puzzle.WordDatabase) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -22,7 +16,7 @@ func Help(t *template.Template, sessions *session.Sessions, wdb puzzle.WordDatab
 		g := s.GameState()
 		sessions.UpdateOrSet(s)
 
-		td := TemplateDataHelpPage{
+		td := models.TemplateDataHelpPage{
 			SolutionWord:                g.ActiveSolutionWord().String(),
 			PastWords:                   s.PastWords(),
 			LetterHints:                 g.LetterHints(),
