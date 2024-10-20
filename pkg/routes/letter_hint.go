@@ -10,10 +10,9 @@ import (
 
 	"github.com/pandorasNox/lettr/pkg/notification"
 	"github.com/pandorasNox/lettr/pkg/puzzle"
+	"github.com/pandorasNox/lettr/pkg/routes/models"
 	"github.com/pandorasNox/lettr/pkg/session"
 )
-
-type TemplateDataLetterHint struct{}
 
 // FilterFunc is ...
 func FilterFunc[S ~[]E, E any](s S, fnShouldKeep func(E) bool) S {
@@ -89,7 +88,7 @@ func LetterHint(t *template.Template, sessions *session.Sessions, wdb puzzle.Wor
 		gameState.AddLetterHint(pick)
 		sessions.UpdateOrSet(sess)
 
-		err := t.ExecuteTemplate(w, "single-letter-hint", pick)
+		err := t.ExecuteTemplate(w, "single-letter-hint", models.TemplateDataLetterHint(pick))
 		if err != nil {
 			log.Printf("error t.ExecuteTemplate 'single-letter-hint': %s", err)
 		}
