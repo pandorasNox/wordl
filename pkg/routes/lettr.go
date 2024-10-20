@@ -8,8 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
-	"strings"
-	"unicode/utf8"
 
 	"github.com/pandorasNox/lettr/pkg/language"
 	"github.com/pandorasNox/lettr/pkg/notification"
@@ -140,7 +138,7 @@ func parseForm(p puzzle.Puzzle, form url.Values, solutionWord puzzle.Word, l lan
 			continue
 		}
 
-		guessedWord, err := sliceToWord(maybeGuessedWord)
+		guessedWord, err := puzzle.SliceToWord(maybeGuessedWord)
 		if err != nil {
 			return p, fmt.Errorf("parseForm could not create guessedWord from form input: %s", err.Error())
 		}
@@ -149,70 +147,10 @@ func parseForm(p puzzle.Puzzle, form url.Values, solutionWord puzzle.Word, l lan
 			return p, ErrNotInWordList
 		}
 
-		wg := evaluateGuessedWord(guessedWord, solutionWord)
+		wg := puzzle.EvaluateGuessedWord(guessedWord, solutionWord)
 
 		p.Guesses[ri] = wg
 	}
 
 	return p, nil
-}
-
-func sliceToWord(maybeGuessedWord []string) (puzzle.Word, error) {
-	w := puzzle.Word{}
-
-	if len(maybeGuessedWord) != len(w) {
-		return puzzle.Word{}, fmt.Errorf("sliceToWord: provided slice does not match word length")
-	}
-
-	for i, l := range maybeGuessedWord {
-		w[i], _ = utf8.DecodeRuneInString(strings.ToLower(l))
-		if w[i] == 65533 {
-			w[i] = 0
-		}
-	}
-
-	return w, nil
-}
-
-func evaluateGuessedWord(guessedWord puzzle.Word, solutionWord puzzle.Word) puzzle.WordGuess {
-	solutionWord = solutionWord.ToLower()
-	guessedLetterCountMap := make(map[rune]int)
-
-	resultWordGuess := puzzle.WordGuess{}
-
-	// initilize
-	for i, gr := range guessedWord {
-		resultWordGuess[i].Letter = gr
-		resultWordGuess[i].Match = puzzle.MatchNone
-	}
-
-	// mark exact matches
-	for i, gr := range guessedWord {
-		exact := solutionWord[i] == gr
-
-		if exact {
-			guessedLetterCountMap[gr]++
-			resultWordGuess[i].Match = puzzle.MatchExact
-		}
-	}
-
-	// mark some/vague matches
-	for i, gr := range guessedWord {
-		if resultWordGuess[i].Match == puzzle.MatchExact {
-			continue
-		}
-
-		some := solutionWord.Contains(gr)
-
-		if !(resultWordGuess[i].Match == puzzle.MatchVague) || some {
-			guessedLetterCountMap[gr]++
-		}
-
-		s := some && (guessedLetterCountMap[gr] <= solutionWord.Count(gr))
-		if s {
-			resultWordGuess[i].Match = puzzle.MatchVague
-		}
-	}
-
-	return resultWordGuess
 }

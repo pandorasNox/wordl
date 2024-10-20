@@ -2,7 +2,9 @@ package puzzle
 
 import (
 	"fmt"
+	"strings"
 	"unicode"
+	"unicode/utf8"
 )
 
 type Word [5]rune
@@ -95,4 +97,21 @@ func toWord(wo string) (Word, error) {
 	}
 
 	return out, nil
+}
+
+func SliceToWord(maybeGuessedWord []string) (Word, error) {
+	w := Word{}
+
+	if len(maybeGuessedWord) != len(w) {
+		return Word{}, fmt.Errorf("sliceToWord: provided slice does not match word length")
+	}
+
+	for i, l := range maybeGuessedWord {
+		w[i], _ = utf8.DecodeRuneInString(strings.ToLower(l))
+		if w[i] == 65533 {
+			w[i] = 0
+		}
+	}
+
+	return w, nil
 }

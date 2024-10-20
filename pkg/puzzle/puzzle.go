@@ -84,3 +84,46 @@ type LetterGuess struct {
 	Letter rune
 	Match  Match
 }
+
+func EvaluateGuessedWord(guessedWord Word, solutionWord Word) WordGuess {
+	solutionWord = solutionWord.ToLower()
+	guessedLetterCountMap := make(map[rune]int)
+
+	resultWordGuess := WordGuess{}
+
+	// initilize
+	for i, gr := range guessedWord {
+		resultWordGuess[i].Letter = gr
+		resultWordGuess[i].Match = MatchNone
+	}
+
+	// mark exact matches
+	for i, gr := range guessedWord {
+		exact := solutionWord[i] == gr
+
+		if exact {
+			guessedLetterCountMap[gr]++
+			resultWordGuess[i].Match = MatchExact
+		}
+	}
+
+	// mark some/vague matches
+	for i, gr := range guessedWord {
+		if resultWordGuess[i].Match == MatchExact {
+			continue
+		}
+
+		some := solutionWord.Contains(gr)
+
+		if !(resultWordGuess[i].Match == MatchVague) || some {
+			guessedLetterCountMap[gr]++
+		}
+
+		s := some && (guessedLetterCountMap[gr] <= solutionWord.Count(gr))
+		if s {
+			resultWordGuess[i].Match = MatchVague
+		}
+	}
+
+	return resultWordGuess
+}
