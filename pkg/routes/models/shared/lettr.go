@@ -8,34 +8,30 @@ import (
 )
 
 type TemplateDataLettr struct {
-	Data                        puzzle.Puzzle
-	Errors                      map[string]string
-	IsSolved                    bool
-	IsLoose                     bool
-	JSCachePurgeTimestamp       int64
-	Language                    language.Language
-	Revision                    string
-	FaviconPath                 string
-	Keyboard                    Keyboard
-	PastWords                   []puzzle.Word
-	SolutionHasDublicateLetters bool
-	ImprintUrl                  string
+	Data                  puzzle.Puzzle
+	IsSolved              bool
+	IsLoose               bool
+	JSCachePurgeTimestamp int64
+	Language              language.Language
+	Revision              string
+	FaviconPath           string
+	Keyboard              Keyboard
+	PastWords             []puzzle.Word
+	ImprintUrl            string
 }
 
-func (fd TemplateDataLettr) New(l language.Language, p puzzle.Puzzle, pastWords []puzzle.Word, solutionHasDublicateLetters bool, imprintUrl string, revision string, faviconPath string) TemplateDataLettr {
+func (fd TemplateDataLettr) New(l language.Language, p puzzle.Puzzle, pastWords []puzzle.Word, imprintUrl string, revision string, faviconPath string) TemplateDataLettr {
 	kb := Keyboard{}
 	kb.Init(l, p.LetterGuesses())
 
 	return TemplateDataLettr{
-		Data:                        p,
-		Errors:                      make(map[string]string),
-		JSCachePurgeTimestamp:       time.Now().Unix(),
-		Language:                    l,
-		Revision:                    revision,
-		FaviconPath:                 faviconPath,
-		Keyboard:                    kb,
-		PastWords:                   pastWords,
-		SolutionHasDublicateLetters: solutionHasDublicateLetters,
-		ImprintUrl:                  imprintUrl,
+		Data:                  p,
+		JSCachePurgeTimestamp: time.Now().Unix(),
+		Language:              l,
+		Revision:              revision,
+		FaviconPath:           faviconPath,
+		Keyboard:              kb,
+		PastWords:             pastWords,
+		ImprintUrl:            imprintUrl,
 	}
 }

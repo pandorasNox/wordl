@@ -39,8 +39,7 @@ func PostNew(t *template.Template, sessions *session.Sessions, wdb puzzle.WordDa
 		s.NewGame(l, wdb)
 		sessions.UpdateOrSet(s)
 
-		g := s.GameState()
-		fData := shared.TemplateDataLettr{}.New(s.Language(), p, s.PastWords(), g.ActiveSolutionWord().HasDublicateLetters(), imprintUrl, revision, faviconPath)
+		fData := shared.TemplateDataLettr{}.New(s.Language(), p, s.PastWords(), imprintUrl, revision, faviconPath)
 		fData.IsSolved = p.IsSolved()
 		fData.IsLoose = p.IsLoose()
 

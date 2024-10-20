@@ -17,7 +17,7 @@ func Index(t *template.Template, sessions *session.Sessions, wdb puzzle.WordData
 		p := sess.GameState().LastEvaluatedAttempt()
 		sessions.UpdateOrSet(sess)
 
-		fData := shared.TemplateDataLettr{}.New(sess.Language(), p, sess.PastWords(), sess.GameState().ActiveSolutionWord().HasDublicateLetters(), imprintUrl, revision, faviconPath)
+		fData := shared.TemplateDataLettr{}.New(sess.Language(), p, sess.PastWords(), imprintUrl, revision, faviconPath)
 		fData.IsSolved = p.IsSolved()
 		fData.IsLoose = p.IsLoose()
 
