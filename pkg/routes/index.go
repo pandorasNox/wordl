@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/pandorasNox/lettr/pkg/puzzle"
-	"github.com/pandorasNox/lettr/pkg/routes/models/shared"
+	"github.com/pandorasNox/lettr/pkg/routes/models"
 	"github.com/pandorasNox/lettr/pkg/session"
 )
 
@@ -17,7 +17,7 @@ func Index(t *template.Template, sessions *session.Sessions, wdb puzzle.WordData
 		p := sess.GameState().LastEvaluatedAttempt()
 		sessions.UpdateOrSet(sess)
 
-		fData := shared.TemplateDataLettr{}.New(sess.Language(), p, sess.PastWords(), imprintUrl, revision, faviconPath)
+		fData := models.TemplateDataIndex{}.New(sess.Language(), p, sess.PastWords(), imprintUrl, revision, faviconPath)
 		fData.IsSolved = p.IsSolved()
 		fData.IsLoose = p.IsLoose()
 
