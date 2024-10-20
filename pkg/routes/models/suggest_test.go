@@ -1,4 +1,4 @@
-package routes
+package models
 
 import "testing"
 
@@ -41,7 +41,7 @@ func TestTemplateDataSuggest_validate(t *testing.T) {
 				Language: tt.fields.Language,
 				Message:  tt.fields.Message,
 			}
-			if err := tds.validate(); err != tt.wantErr {
+			if err := tds.Validate(); err != tt.wantErr {
 				t.Errorf("TemplateDataSuggest.validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
