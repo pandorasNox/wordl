@@ -86,23 +86,14 @@ func main() {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /static/", routes.Static(staticFS))
-
 	mux.HandleFunc("GET /", routes.Index(t, &sessions, wordDb, envCfg.imprintUrl, Revision, FaviconPath))
-
 	mux.HandleFunc("GET /test", routes.TestPage(t))
-
 	mux.HandleFunc("GET /letter-hint", routes.LetterHint(t, &sessions, wordDb))
-
 	mux.HandleFunc("GET /lettr", routes.GetLettr(t, &sessions, wordDb, envCfg.imprintUrl, Revision, FaviconPath))
-
 	mux.HandleFunc("POST /lettr", routes.PostLettr(t, &sessions, wordDb, envCfg.imprintUrl, Revision, FaviconPath))
-
 	mux.HandleFunc("POST /new", routes.PostNew(t, &sessions, wordDb, envCfg.imprintUrl, Revision, FaviconPath))
-
 	mux.HandleFunc("POST /help", routes.Help(t, &sessions, wordDb))
-
 	mux.HandleFunc("GET /suggest", routes.GetSuggest(t))
-
 	mux.HandleFunc("POST /suggest", routes.PostSuggest(t, envCfg.githubToken))
 
 	middlewares := []func(h http.Handler) http.Handler{
