@@ -18,7 +18,7 @@
 * [ ] refactoring
     * [x] rename wordle to `lettr` bec of trademark
     * [x] use packages instead of everythiung in one file
-    * [ ] move leftover routing from main.go to routes packages
+    * [x] move leftover routing from main.go to routes packages
     * [ ] session handling
 * [ ] check out https://github.com/torenware/vite-go
     * https://vitejs.dev/guide/backend-integration VS https://www.npmjs.com/package/webpack-assets-manifest
@@ -48,8 +48,9 @@
         * [x] tests
         * [x] linting
         * [x] test image build
+        * [x] formatting
     * [x] add imprint/link to imprint
-    * [ ] fix letter hints is not reset with new game bug
+    * [x] fix letter hints is not reset with new game bug
 - nice-to-have
     * [x] option for double letter hint
     * [ ] pick word dataset picker
