@@ -37,7 +37,6 @@ RUN go mod download
 
 COPY ./main.go ./main.go
 COPY ./configs ./configs
-COPY ./templates ./templates
 COPY ./web ./web
 
 RUN set -eu; \

@@ -19,12 +19,12 @@ var Revision = "0000000"
 var FaviconPath = "/static/assets/favicon"
 
 //go:embed configs/*.txt
-//go:embed templates/*.html.tmpl
-//go:embed templates/**/*.html.tmpl
+//go:embed pkg/routes/templates/*.html.tmpl
+//go:embed pkg/routes/templates/**/*.html.tmpl
 //go:embed web/static/assets/*
 //go:embed web/static/generated/*.js
 //go:embed web/static/generated/*.css
-var fs embed.FS
+var embedFs embed.FS
 
 type env struct {
 	port        string
@@ -60,25 +60,25 @@ func main() {
 	sessions := session.NewSessions()
 
 	wordDb := puzzle.WordDatabase{}
-	err := wordDb.Init(fs, puzzle.FilePathsByLang())
+	err := wordDb.Init(embedFs, puzzle.FilePathsByLang())
 	if err != nil {
 		log.Fatalf("init wordDatabase failed: %s", err)
 	}
 
 	log.Printf("env conf:\n%s", envCfg)
 
-	// t := template.Must(template.ParseFS(fs, "templates/index.html.tmpl", "templates/lettr-form.html.tmpl"))
-	// log.Printf("template name: %s", t.Name())
-	t := template.Must(template.New("index.html.tmpl").Funcs(funcMap).ParseFS(
-		fs,
-		"templates/index.html.tmpl",
-		"templates/lettr-form.html.tmpl",
-		"templates/help.html.tmpl",
-		"templates/suggest.html.tmpl",
-		"templates/pages/test.html.tmpl",
+	// routesTemplate := template.Must(template.ParseFS(fs, "templates/index.html.tmpl", "templates/lettr-form.html.tmpl"))
+	// log.Printf("template name: %s", routesTemplate.Name())
+	routesTemplate := template.Must(template.New("index.html.tmpl").Funcs(funcMap).ParseFS(
+		embedFs,
+		"pkg/routes/templates/index.html.tmpl",
+		"pkg/routes/templates/lettr-form.html.tmpl",
+		"pkg/routes/templates/help.html.tmpl",
+		"pkg/routes/templates/suggest.html.tmpl",
+		"pkg/routes/templates/pages/test.html.tmpl",
 	))
 
-	staticFS, err := iofs.Sub(fs, "web/static")
+	staticFS, err := iofs.Sub(embedFs, "web/static")
 	if err != nil {
 		log.Fatalf("subtree for 'static' dir of embed fs failed: %s", err) //TODO
 	}
@@ -86,15 +86,15 @@ func main() {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /static/", routes.Static(staticFS))
-	mux.HandleFunc("GET /", routes.Index(t, &sessions, wordDb, envCfg.imprintUrl, Revision, FaviconPath))
-	mux.HandleFunc("GET /test", routes.TestPage(t))
-	mux.HandleFunc("GET /letter-hint", routes.LetterHint(t, &sessions, wordDb))
-	mux.HandleFunc("GET /lettr", routes.GetLettr(t, &sessions, wordDb, envCfg.imprintUrl, Revision, FaviconPath))
-	mux.HandleFunc("POST /lettr", routes.PostLettr(t, &sessions, wordDb, envCfg.imprintUrl, Revision, FaviconPath))
-	mux.HandleFunc("POST /new", routes.PostNew(t, &sessions, wordDb, envCfg.imprintUrl, Revision, FaviconPath))
-	mux.HandleFunc("POST /help", routes.Help(t, &sessions, wordDb))
-	mux.HandleFunc("GET /suggest", routes.GetSuggest(t))
-	mux.HandleFunc("POST /suggest", routes.PostSuggest(t, envCfg.githubToken))
+	mux.HandleFunc("GET /", routes.Index(routesTemplate, &sessions, wordDb, envCfg.imprintUrl, Revision, FaviconPath))
+	mux.HandleFunc("GET /test", routes.TestPage(routesTemplate))
+	mux.HandleFunc("GET /letter-hint", routes.LetterHint(routesTemplate, &sessions, wordDb))
+	mux.HandleFunc("GET /lettr", routes.GetLettr(routesTemplate, &sessions, wordDb, envCfg.imprintUrl, Revision, FaviconPath))
+	mux.HandleFunc("POST /lettr", routes.PostLettr(routesTemplate, &sessions, wordDb, envCfg.imprintUrl, Revision, FaviconPath))
+	mux.HandleFunc("POST /new", routes.PostNew(routesTemplate, &sessions, wordDb, envCfg.imprintUrl, Revision, FaviconPath))
+	mux.HandleFunc("POST /help", routes.Help(routesTemplate, &sessions, wordDb))
+	mux.HandleFunc("GET /suggest", routes.GetSuggest(routesTemplate))
+	mux.HandleFunc("POST /suggest", routes.PostSuggest(routesTemplate, envCfg.githubToken))
 
 	middlewares := []func(h http.Handler) http.Handler{
 		func(h http.Handler) http.Handler {

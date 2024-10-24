@@ -16,7 +16,7 @@ func Test_ExpectedEmbededFiles(t *testing.T) {
 		"web/static/generated/output.css",
 	}
 
-	embededFiles, err := getAllFilenames(fs)
+	embededFiles, err := getAllFilenames(embedFs)
 	if err != nil {
 		t.Errorf("getAllFilenames() error = %v", err)
 	}
