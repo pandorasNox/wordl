@@ -12,20 +12,8 @@ import (
 	"github.com/pandorasNox/lettr/pkg/puzzle"
 	"github.com/pandorasNox/lettr/pkg/routes/models"
 	"github.com/pandorasNox/lettr/pkg/session"
+	"github.com/pandorasNox/lettr/pkg/utils"
 )
-
-// FilterFunc is ...
-func FilterFunc[S ~[]E, E any](s S, fnShouldKeep func(E) bool) S {
-	o := S{}
-
-	for _, v := range s {
-		if fnShouldKeep(v) {
-			o = append(o, v)
-		}
-	}
-
-	return o
-}
 
 func Map[T, V any](ts []T, fn func(T) V) []V {
 	result := make([]V, len(ts))
@@ -58,19 +46,19 @@ func LetterHint(t *template.Template, sessions *session.Sessions, wdb puzzle.Wor
 		solutionWord := gameState.ActiveSolutionWord()
 		lg := gameState.LastEvaluatedAttempt().LetterGuesses()
 
-		matchedLetter := FilterFunc(lg, func(l puzzle.LetterGuess) bool {
+		matchedLetter := utils.SlicesFilterFunc(lg, func(l puzzle.LetterGuess) bool {
 			return l.Match.Is(puzzle.MatchExact) || l.Match.Is(puzzle.MatchVague)
 		})
 		matchedRunes := Map(matchedLetter, func(l puzzle.LetterGuess) rune {
 			return l.Letter
 		})
 
-		notFoundLetters := FilterFunc(solutionWord.ToSlice(), func(l rune) bool {
+		notFoundLetters := utils.SlicesFilterFunc(solutionWord.ToSlice(), func(l rune) bool {
 			return !slices.Contains(matchedRunes, l)
 		})
 
 		lhs := gameState.LetterHints()
-		hintOptions := FilterFunc(notFoundLetters, func(l rune) bool {
+		hintOptions := utils.SlicesFilterFunc(notFoundLetters, func(l rune) bool {
 			return !slices.Contains(lhs, l)
 		})
 
