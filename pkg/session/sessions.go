@@ -3,8 +3,6 @@ package session
 import (
 	"slices"
 	"time"
-
-	"github.com/pandorasNox/lettr/pkg/utils"
 )
 
 type Sessions struct {
@@ -38,8 +36,7 @@ func (ss *Sessions) UpdateOrSet(sess session) {
 
 func (ss *Sessions) RemoveExpiredSessions() {
 	now := time.Now()
-
-	ss.sessions = utils.SlicesFilterFunc(ss.sessions, func(s session) bool {
-		return s.expiresAt.After(now)
+	ss.sessions = slices.DeleteFunc(ss.sessions, func(s session) bool {
+		return now.After(s.expiresAt)
 	})
 }
