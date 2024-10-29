@@ -2,7 +2,6 @@ package routes
 
 import (
 	"context"
-	"html/template"
 	"log"
 	"net/http"
 
@@ -11,16 +10,16 @@ import (
 	"github.com/pandorasNox/lettr/pkg/routes/models"
 )
 
-func GetSuggest(t *template.Template) http.HandlerFunc {
+func GetSuggest() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		err := t.ExecuteTemplate(w, "suggest", models.TemplateDataSuggest{})
+		err := routesTemplates.ExecuteTemplate(w, "suggest", models.TemplateDataSuggest{})
 		if err != nil {
 			log.Printf("error t.ExecuteTemplate '/suggest' route: %s", err)
 		}
 	}
 }
 
-func PostSuggest(t *template.Template, githubToken string) http.HandlerFunc {
+func PostSuggest(githubToken string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		notifier := notification.NewNotifier()
 
@@ -30,7 +29,7 @@ func PostSuggest(t *template.Template, githubToken string) http.HandlerFunc {
 
 			w.WriteHeader(422)
 			notifier.AddError("can not parse form data")
-			err = t.ExecuteTemplate(w, "oob-messages", notifier.ToTemplate())
+			err = routesTemplates.ExecuteTemplate(w, "oob-messages", notifier.ToTemplate())
 			if err != nil {
 				log.Printf("error t.ExecuteTemplate 'oob-messages': %s", err)
 			}
@@ -51,7 +50,7 @@ func PostSuggest(t *template.Template, githubToken string) http.HandlerFunc {
 			w.Header().Add("HX-Reswap", "none")
 
 			notifier.AddError(err.Error())
-			err = t.ExecuteTemplate(w, "oob-messages", notifier.ToTemplate())
+			err = routesTemplates.ExecuteTemplate(w, "oob-messages", notifier.ToTemplate())
 			if err != nil {
 				log.Printf("error t.ExecuteTemplate 'oob-messages' route: %s", err)
 			}
@@ -67,7 +66,7 @@ func PostSuggest(t *template.Template, githubToken string) http.HandlerFunc {
 			w.Header().Add("HX-Reswap", "none")
 
 			notifier.AddError("Could not send suggestion.")
-			err = t.ExecuteTemplate(w, "oob-messages", notifier.ToTemplate())
+			err = routesTemplates.ExecuteTemplate(w, "oob-messages", notifier.ToTemplate())
 			if err != nil {
 				log.Printf("error t.ExecuteTemplate 'oob-messages' route: %s", err)
 			}
@@ -76,12 +75,12 @@ func PostSuggest(t *template.Template, githubToken string) http.HandlerFunc {
 		}
 
 		notifier.AddSuccess("Suggestion send, thank you!")
-		err = t.ExecuteTemplate(w, "oob-messages", notifier.ToTemplate())
+		err = routesTemplates.ExecuteTemplate(w, "oob-messages", notifier.ToTemplate())
 		if err != nil {
 			log.Printf("error t.ExecuteTemplate 'oob-messages' route: %s", err)
 		}
 
-		err = t.ExecuteTemplate(w, "suggest", models.TemplateDataSuggest{})
+		err = routesTemplates.ExecuteTemplate(w, "suggest", models.TemplateDataSuggest{})
 		if err != nil {
 			log.Printf("error t.ExecuteTemplate '/suggest' route: %s", err)
 		}

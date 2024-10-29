@@ -1,7 +1,6 @@
 package routes
 
 import (
-	"html/template"
 	"log"
 	"math/rand"
 	"net/http"
@@ -36,7 +35,7 @@ func PickRandomRune(runeList []rune, randSrc rand.Source) rune {
 	return runeList[randIndex]
 }
 
-func LetterHint(t *template.Template, sessions *session.Sessions, wdb puzzle.WordDatabase) http.HandlerFunc {
+func LetterHint(sessions *session.Sessions, wdb puzzle.WordDatabase) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		notifier := notification.NewNotifier()
 		sess := session.HandleSession(w, r, sessions, wdb)
@@ -65,7 +64,7 @@ func LetterHint(t *template.Template, sessions *session.Sessions, wdb puzzle.Wor
 		pick := PickRandomRune(hintOptions, randSrc)
 		if pick == rune(0) {
 			notifier.AddInfo("No more hints to provide")
-			err := t.ExecuteTemplate(w, "oob-messages", notifier.ToTemplate())
+			err := routesTemplates.ExecuteTemplate(w, "oob-messages", notifier.ToTemplate())
 			if err != nil {
 				log.Printf("error t.ExecuteTemplate 'oob-messages': %s", err)
 			}
@@ -75,7 +74,7 @@ func LetterHint(t *template.Template, sessions *session.Sessions, wdb puzzle.Wor
 		gameState.AddLetterHint(pick)
 		sessions.UpdateOrSet(sess)
 
-		err := t.ExecuteTemplate(w, "single-letter-hint", models.TemplateDataLetterHint(pick))
+		err := routesTemplates.ExecuteTemplate(w, "single-letter-hint", models.TemplateDataLetterHint(pick))
 		if err != nil {
 			log.Printf("error t.ExecuteTemplate 'single-letter-hint': %s", err)
 		}

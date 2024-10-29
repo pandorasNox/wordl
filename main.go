@@ -3,7 +3,6 @@ package main
 import (
 	"embed"
 	"fmt"
-	"html/template"
 	iofs "io/fs"
 	"log"
 	"net/http"
@@ -44,13 +43,6 @@ func (e env) String() string {
 	return s
 }
 
-// inspiration see: https://forum.golangbridge.org/t/can-i-use-enum-in-template/25296
-var funcMap = template.FuncMap{
-	"IsMatchVague": puzzle.MatchVague.Is,
-	"IsMatchNone":  puzzle.MatchNone.Is,
-	"IsMatchExact": puzzle.MatchExact.Is,
-}
-
 func main() {
 	log.Println("staring server...")
 
@@ -65,17 +57,6 @@ func main() {
 
 	log.Printf("env conf:\n%s", envCfg)
 
-	// routesTemplate := template.Must(template.ParseFS(fs, "templates/index.html.tmpl", "templates/lettr-form.html.tmpl"))
-	// log.Printf("template name: %s", routesTemplate.Name())
-	routesTemplate := template.Must(template.New("index.html.tmpl").Funcs(funcMap).ParseFS(
-		routes.TemplatesFs,
-		"templates/index.html.tmpl",
-		"templates/lettr-form.html.tmpl",
-		"templates/help.html.tmpl",
-		"templates/suggest.html.tmpl",
-		"templates/pages/test.html.tmpl",
-	))
-
 	staticFS, err := iofs.Sub(embedFs, "web/static")
 	if err != nil {
 		log.Fatalf("subtree for 'static' dir of embed fs failed: %s", err) //TODO
@@ -84,15 +65,15 @@ func main() {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /static/", routes.Static(staticFS))
-	mux.HandleFunc("GET /", routes.Index(routesTemplate, &sessions, wordDb, envCfg.imprintUrl, Revision, FaviconPath))
-	mux.HandleFunc("GET /test", routes.TestPage(routesTemplate))
-	mux.HandleFunc("GET /letter-hint", routes.LetterHint(routesTemplate, &sessions, wordDb))
-	mux.HandleFunc("GET /lettr", routes.GetLettr(routesTemplate, &sessions, wordDb, envCfg.imprintUrl, Revision, FaviconPath))
-	mux.HandleFunc("POST /lettr", routes.PostLettr(routesTemplate, &sessions, wordDb, envCfg.imprintUrl, Revision, FaviconPath))
-	mux.HandleFunc("POST /new", routes.PostNew(routesTemplate, &sessions, wordDb, envCfg.imprintUrl, Revision, FaviconPath))
-	mux.HandleFunc("POST /help", routes.Help(routesTemplate, &sessions, wordDb))
-	mux.HandleFunc("GET /suggest", routes.GetSuggest(routesTemplate))
-	mux.HandleFunc("POST /suggest", routes.PostSuggest(routesTemplate, envCfg.githubToken))
+	mux.HandleFunc("GET /", routes.Index(&sessions, wordDb, envCfg.imprintUrl, Revision, FaviconPath))
+	mux.HandleFunc("GET /test", routes.TestPage())
+	mux.HandleFunc("GET /letter-hint", routes.LetterHint(&sessions, wordDb))
+	mux.HandleFunc("GET /lettr", routes.GetLettr(&sessions, wordDb, envCfg.imprintUrl, Revision, FaviconPath))
+	mux.HandleFunc("POST /lettr", routes.PostLettr(&sessions, wordDb, envCfg.imprintUrl, Revision, FaviconPath))
+	mux.HandleFunc("POST /new", routes.PostNew(&sessions, wordDb, envCfg.imprintUrl, Revision, FaviconPath))
+	mux.HandleFunc("POST /help", routes.Help(&sessions, wordDb))
+	mux.HandleFunc("GET /suggest", routes.GetSuggest())
+	mux.HandleFunc("POST /suggest", routes.PostSuggest(envCfg.githubToken))
 
 	middlewares := []func(h http.Handler) http.Handler{
 		func(h http.Handler) http.Handler {

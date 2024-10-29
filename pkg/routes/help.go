@@ -1,7 +1,6 @@
 package routes
 
 import (
-	"html/template"
 	"log"
 	"net/http"
 
@@ -10,7 +9,7 @@ import (
 	"github.com/pandorasNox/lettr/pkg/session"
 )
 
-func Help(t *template.Template, sessions *session.Sessions, wdb puzzle.WordDatabase) http.HandlerFunc {
+func Help(sessions *session.Sessions, wdb puzzle.WordDatabase) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := session.HandleSession(w, r, sessions, wdb)
 		g := s.GameState()
@@ -23,7 +22,7 @@ func Help(t *template.Template, sessions *session.Sessions, wdb puzzle.WordDatab
 			SolutionHasDublicateLetters: g.ActiveSolutionWord().HasDublicateLetters(),
 		}
 
-		err := t.ExecuteTemplate(w, "help", td)
+		err := routesTemplates.ExecuteTemplate(w, "help", td)
 		if err != nil {
 			log.Printf("error t.ExecuteTemplate '/help' route: %s", err)
 		}

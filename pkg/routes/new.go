@@ -1,7 +1,6 @@
 package routes
 
 import (
-	"html/template"
 	"log"
 	"net/http"
 
@@ -11,7 +10,7 @@ import (
 	"github.com/pandorasNox/lettr/pkg/session"
 )
 
-func PostNew(t *template.Template, sessions *session.Sessions, wdb puzzle.WordDatabase, imprintUrl string, revision string, faviconPath string) http.HandlerFunc {
+func PostNew(sessions *session.Sessions, wdb puzzle.WordDatabase, imprintUrl string, revision string, faviconPath string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := session.HandleSession(w, r, sessions, wdb)
 
@@ -27,7 +26,7 @@ func PostNew(t *template.Template, sessions *session.Sessions, wdb puzzle.WordDa
 			}
 			tData := TemplateDataLanguge{Language: l}
 
-			err := t.ExecuteTemplate(w, "oob-lang-switch", tData)
+			err := routesTemplates.ExecuteTemplate(w, "oob-lang-switch", tData)
 			if err != nil {
 				log.Printf("error t.ExecuteTemplate '/new' route: %s", err)
 			}
@@ -44,7 +43,7 @@ func PostNew(t *template.Template, sessions *session.Sessions, wdb puzzle.WordDa
 		fData.IsLoose = p.IsLoose()
 
 		// w.Header().Add("HX-Refresh", "true")
-		err := t.ExecuteTemplate(w, "lettr-form", fData)
+		err := routesTemplates.ExecuteTemplate(w, "lettr-form", fData)
 		if err != nil {
 			log.Printf("error t.ExecuteTemplate '/new' route: %s", err)
 		}
