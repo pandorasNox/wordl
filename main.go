@@ -19,8 +19,6 @@ var Revision = "0000000"
 var FaviconPath = "/static/assets/favicon"
 
 //go:embed configs/*.txt
-//go:embed pkg/routes/templates/*.html.tmpl
-//go:embed pkg/routes/templates/**/*.html.tmpl
 //go:embed web/static/assets/*
 //go:embed web/static/generated/*.js
 //go:embed web/static/generated/*.css
@@ -70,12 +68,12 @@ func main() {
 	// routesTemplate := template.Must(template.ParseFS(fs, "templates/index.html.tmpl", "templates/lettr-form.html.tmpl"))
 	// log.Printf("template name: %s", routesTemplate.Name())
 	routesTemplate := template.Must(template.New("index.html.tmpl").Funcs(funcMap).ParseFS(
-		embedFs,
-		"pkg/routes/templates/index.html.tmpl",
-		"pkg/routes/templates/lettr-form.html.tmpl",
-		"pkg/routes/templates/help.html.tmpl",
-		"pkg/routes/templates/suggest.html.tmpl",
-		"pkg/routes/templates/pages/test.html.tmpl",
+		routes.TemplatesFs,
+		"templates/index.html.tmpl",
+		"templates/lettr-form.html.tmpl",
+		"templates/help.html.tmpl",
+		"templates/suggest.html.tmpl",
+		"templates/pages/test.html.tmpl",
 	))
 
 	staticFS, err := iofs.Sub(embedFs, "web/static")
