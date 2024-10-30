@@ -75,7 +75,7 @@ func main() {
 	mux.HandleFunc("GET /suggest", routes.GetSuggest())
 	mux.HandleFunc("POST /suggest", routes.PostSuggest(envCfg.githubToken))
 
-	middlewares := []func(h http.Handler) http.Handler{
+	middlewares := []func(http.Handler) http.Handler{
 		func(h http.Handler) http.Handler {
 			return middleware.NewRequestSize(h, 32*1024 /* 32kiB */)
 		},
