@@ -14,9 +14,17 @@ type Router struct {
 	mux http.ServeMux
 }
 
-func New(staticFS iofs.FS, sessions *session.Sessions, wordDb puzzle.WordDatabase, imprintUrl string, githubToken string, revision string, faviconPath string) *http.ServeMux {
+func New(staticFS iofs.FS, sessions *session.Sessions, wordDb puzzle.WordDatabase, imprintUrl string, githubToken string, revision string, faviconPath string) http.Handler {
 	mux := http.NewServeMux()
 
+	mux = addRoutes(mux, staticFS, sessions, wordDb, imprintUrl, githubToken, revision, faviconPath)
+
+	handlerWithRoutesWithMiddlewares := addMiddlewares(mux)
+
+	return handlerWithRoutesWithMiddlewares
+}
+
+func addRoutes(mux *http.ServeMux, staticFS iofs.FS, sessions *session.Sessions, wordDb puzzle.WordDatabase, imprintUrl string, githubToken string, revision string, faviconPath string) *http.ServeMux {
 	mux.HandleFunc("GET /static/", routes.Static(staticFS))
 	mux.HandleFunc("GET /", routes.Index(sessions, wordDb, imprintUrl, revision, faviconPath))
 	mux.HandleFunc("GET /test", routes.TestPage())
@@ -28,6 +36,10 @@ func New(staticFS iofs.FS, sessions *session.Sessions, wordDb puzzle.WordDatabas
 	mux.HandleFunc("GET /suggest", routes.GetSuggest())
 	mux.HandleFunc("POST /suggest", routes.PostSuggest(githubToken))
 
+	return mux
+}
+
+func addMiddlewares(mux *http.ServeMux) http.Handler {
 	middlewares := []func(http.Handler) http.Handler{
 		func(h http.Handler) http.Handler {
 			return middleware.NewRequestSize(h, 32*1024 /* 32kiB */)
@@ -42,5 +54,5 @@ func New(staticFS iofs.FS, sessions *session.Sessions, wordDb puzzle.WordDatabas
 		muxWithMiddlewares = fm(muxWithMiddlewares)
 	}
 
-	return mux
+	return muxWithMiddlewares
 }

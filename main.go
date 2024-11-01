@@ -61,12 +61,12 @@ func main() {
 		log.Fatalf("subtree for 'static' dir of embed fs failed: %s", err) //TODO
 	}
 
-	routerMux := router.New(staticFS, &sessions, wordDb, envCfg.imprintUrl, envCfg.githubToken, Revision, FaviconPath)
+	router := router.New(staticFS, &sessions, wordDb, envCfg.imprintUrl, envCfg.githubToken, Revision, FaviconPath)
 
 	// v1 := http.NewServeMux()
 	// v1.Handle("/v1/", http.StripPrefix("/v1", muxWithMiddlewares))
 
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", envCfg.port), muxWithMiddlewares))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", envCfg.port), router))
 }
 
 func envConfig() env {
