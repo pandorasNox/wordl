@@ -5,7 +5,8 @@ import (
 	"net/http"
 
 	"github.com/pandorasNox/lettr/pkg/puzzle"
-	"github.com/pandorasNox/lettr/pkg/routes/models"
+	"github.com/pandorasNox/lettr/pkg/router/routes/models"
+	"github.com/pandorasNox/lettr/pkg/router/routes/templates"
 	"github.com/pandorasNox/lettr/pkg/session"
 )
 
@@ -20,7 +21,7 @@ func Index(sessions *session.Sessions, wdb puzzle.WordDatabase, imprintUrl strin
 		fData.IsSolved = p.IsSolved()
 		fData.IsLoose = p.IsLoose()
 
-		err := routesTemplates.ExecuteTemplate(w, "index.html.tmpl", fData)
+		err := templates.Routes.ExecuteTemplate(w, "index.html.tmpl", fData)
 		if err != nil {
 			log.Printf("error t.Execute '/' route: %s", err)
 		}

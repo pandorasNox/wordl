@@ -7,12 +7,13 @@ import (
 
 	"github.com/pandorasNox/lettr/pkg/github"
 	"github.com/pandorasNox/lettr/pkg/notification"
-	"github.com/pandorasNox/lettr/pkg/routes/models"
+	"github.com/pandorasNox/lettr/pkg/router/routes/models"
+	"github.com/pandorasNox/lettr/pkg/router/routes/templates"
 )
 
 func GetSuggest() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		err := routesTemplates.ExecuteTemplate(w, "suggest", models.TemplateDataSuggest{})
+		err := templates.Routes.ExecuteTemplate(w, "suggest", models.TemplateDataSuggest{})
 		if err != nil {
 			log.Printf("error t.ExecuteTemplate '/suggest' route: %s", err)
 		}
@@ -29,7 +30,7 @@ func PostSuggest(githubToken string) http.HandlerFunc {
 
 			w.WriteHeader(422)
 			notifier.AddError("can not parse form data")
-			err = routesTemplates.ExecuteTemplate(w, "oob-messages", notifier.ToTemplate())
+			err = templates.Routes.ExecuteTemplate(w, "oob-messages", notifier.ToTemplate())
 			if err != nil {
 				log.Printf("error t.ExecuteTemplate 'oob-messages': %s", err)
 			}
@@ -50,7 +51,7 @@ func PostSuggest(githubToken string) http.HandlerFunc {
 			w.Header().Add("HX-Reswap", "none")
 
 			notifier.AddError(err.Error())
-			err = routesTemplates.ExecuteTemplate(w, "oob-messages", notifier.ToTemplate())
+			err = templates.Routes.ExecuteTemplate(w, "oob-messages", notifier.ToTemplate())
 			if err != nil {
 				log.Printf("error t.ExecuteTemplate 'oob-messages' route: %s", err)
 			}
@@ -66,7 +67,7 @@ func PostSuggest(githubToken string) http.HandlerFunc {
 			w.Header().Add("HX-Reswap", "none")
 
 			notifier.AddError("Could not send suggestion.")
-			err = routesTemplates.ExecuteTemplate(w, "oob-messages", notifier.ToTemplate())
+			err = templates.Routes.ExecuteTemplate(w, "oob-messages", notifier.ToTemplate())
 			if err != nil {
 				log.Printf("error t.ExecuteTemplate 'oob-messages' route: %s", err)
 			}
@@ -75,12 +76,12 @@ func PostSuggest(githubToken string) http.HandlerFunc {
 		}
 
 		notifier.AddSuccess("Suggestion send, thank you!")
-		err = routesTemplates.ExecuteTemplate(w, "oob-messages", notifier.ToTemplate())
+		err = templates.Routes.ExecuteTemplate(w, "oob-messages", notifier.ToTemplate())
 		if err != nil {
 			log.Printf("error t.ExecuteTemplate 'oob-messages' route: %s", err)
 		}
 
-		err = routesTemplates.ExecuteTemplate(w, "suggest", models.TemplateDataSuggest{})
+		err = templates.Routes.ExecuteTemplate(w, "suggest", models.TemplateDataSuggest{})
 		if err != nil {
 			log.Printf("error t.ExecuteTemplate '/suggest' route: %s", err)
 		}

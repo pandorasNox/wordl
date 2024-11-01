@@ -9,7 +9,8 @@ import (
 
 	"github.com/pandorasNox/lettr/pkg/notification"
 	"github.com/pandorasNox/lettr/pkg/puzzle"
-	"github.com/pandorasNox/lettr/pkg/routes/models"
+	"github.com/pandorasNox/lettr/pkg/router/routes/models"
+	"github.com/pandorasNox/lettr/pkg/router/routes/templates"
 	"github.com/pandorasNox/lettr/pkg/session"
 )
 
@@ -64,7 +65,7 @@ func LetterHint(sessions *session.Sessions, wdb puzzle.WordDatabase) http.Handle
 		pick := PickRandomRune(hintOptions, randSrc)
 		if pick == rune(0) {
 			notifier.AddInfo("No more hints to provide")
-			err := routesTemplates.ExecuteTemplate(w, "oob-messages", notifier.ToTemplate())
+			err := templates.Routes.ExecuteTemplate(w, "oob-messages", notifier.ToTemplate())
 			if err != nil {
 				log.Printf("error t.ExecuteTemplate 'oob-messages': %s", err)
 			}
@@ -74,7 +75,7 @@ func LetterHint(sessions *session.Sessions, wdb puzzle.WordDatabase) http.Handle
 		gameState.AddLetterHint(pick)
 		sessions.UpdateOrSet(sess)
 
-		err := routesTemplates.ExecuteTemplate(w, "single-letter-hint", models.TemplateDataLetterHint(pick))
+		err := templates.Routes.ExecuteTemplate(w, "single-letter-hint", models.TemplateDataLetterHint(pick))
 		if err != nil {
 			log.Printf("error t.ExecuteTemplate 'single-letter-hint': %s", err)
 		}

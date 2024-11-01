@@ -1,4 +1,4 @@
-package routes
+package templates
 
 import (
 	"embed"
@@ -7,8 +7,8 @@ import (
 	"github.com/pandorasNox/lettr/pkg/puzzle"
 )
 
-//go:embed templates/*.html.tmpl
-//go:embed templates/**/*.html.tmpl
+//go:embed *.html.tmpl
+//go:embed **/*.html.tmpl
 var templatesFs embed.FS
 
 // inspiration see: https://forum.golangbridge.org/t/can-i-use-enum-in-template/25296
@@ -20,7 +20,7 @@ var funcMap = template.FuncMap{
 
 // routesTemplate := template.Must(template.ParseFS(fs, "routesTemplates/index.html.tmpl", "routesTemplates/lettr-form.html.tmpl"))
 // log.Printf("template name: %s", routesTemplate.Name())
-var routesTemplates = template.Must(template.New("index.html.tmpl").Funcs(funcMap).ParseFS(
+var Routes = template.Must(template.New("index.html.tmpl").Funcs(funcMap).ParseFS(
 	templatesFs,
 	"templates/index.html.tmpl",
 	"templates/lettr-form.html.tmpl",

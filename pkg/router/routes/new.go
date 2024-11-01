@@ -6,7 +6,8 @@ import (
 
 	"github.com/pandorasNox/lettr/pkg/language"
 	"github.com/pandorasNox/lettr/pkg/puzzle"
-	"github.com/pandorasNox/lettr/pkg/routes/models/shared"
+	"github.com/pandorasNox/lettr/pkg/router/routes/models/shared"
+	"github.com/pandorasNox/lettr/pkg/router/routes/templates"
 	"github.com/pandorasNox/lettr/pkg/session"
 )
 
@@ -26,7 +27,7 @@ func PostNew(sessions *session.Sessions, wdb puzzle.WordDatabase, imprintUrl str
 			}
 			tData := TemplateDataLanguge{Language: l}
 
-			err := routesTemplates.ExecuteTemplate(w, "oob-lang-switch", tData)
+			err := templates.Routes.ExecuteTemplate(w, "oob-lang-switch", tData)
 			if err != nil {
 				log.Printf("error t.ExecuteTemplate '/new' route: %s", err)
 			}
@@ -43,7 +44,7 @@ func PostNew(sessions *session.Sessions, wdb puzzle.WordDatabase, imprintUrl str
 		fData.IsLoose = p.IsLoose()
 
 		// w.Header().Add("HX-Refresh", "true")
-		err := routesTemplates.ExecuteTemplate(w, "lettr-form", fData)
+		err := templates.Routes.ExecuteTemplate(w, "lettr-form", fData)
 		if err != nil {
 			log.Printf("error t.ExecuteTemplate '/new' route: %s", err)
 		}

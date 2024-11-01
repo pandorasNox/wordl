@@ -11,7 +11,8 @@ import (
 	"github.com/pandorasNox/lettr/pkg/language"
 	"github.com/pandorasNox/lettr/pkg/notification"
 	"github.com/pandorasNox/lettr/pkg/puzzle"
-	"github.com/pandorasNox/lettr/pkg/routes/models/shared"
+	"github.com/pandorasNox/lettr/pkg/router/routes/models/shared"
+	"github.com/pandorasNox/lettr/pkg/router/routes/templates"
 	"github.com/pandorasNox/lettr/pkg/session"
 )
 
@@ -35,7 +36,7 @@ func GetLettr(sessions *session.Sessions, wdb puzzle.WordDatabase, imprintUrl st
 		fData.IsSolved = p.IsSolved()
 		fData.IsLoose = p.IsLoose()
 
-		err := routesTemplates.ExecuteTemplate(w, "lettr-form", fData)
+		err := templates.Routes.ExecuteTemplate(w, "lettr-form", fData)
 		if err != nil {
 			log.Printf("error t.ExecuteTemplate '/lettr' route: %s", err)
 		}
@@ -60,7 +61,7 @@ func PostLettr(sessions *session.Sessions, wdb puzzle.WordDatabase, imprintUrl s
 
 			w.WriteHeader(422)
 			notifier.AddError("cannot parse form data")
-			err = routesTemplates.ExecuteTemplate(w, "oob-messages", notifier.ToTemplate())
+			err = templates.Routes.ExecuteTemplate(w, "oob-messages", notifier.ToTemplate())
 			if err != nil {
 				log.Printf("error t.ExecuteTemplate 'oob-messages': %s", err)
 			}
@@ -78,7 +79,7 @@ func PostLettr(sessions *session.Sessions, wdb puzzle.WordDatabase, imprintUrl s
 		if p.ActiveRow() != countFilledFormRows(r.PostForm)-1 {
 			w.WriteHeader(422)
 			notifier.AddError("faked rows")
-			err = routesTemplates.ExecuteTemplate(w, "oob-messages", notifier.ToTemplate())
+			err = templates.Routes.ExecuteTemplate(w, "oob-messages", notifier.ToTemplate())
 			if err != nil {
 				log.Printf("error t.ExecuteTemplate 'oob-messages': %s", err)
 			}
@@ -89,7 +90,7 @@ func PostLettr(sessions *session.Sessions, wdb puzzle.WordDatabase, imprintUrl s
 		if err == ErrNotInWordList {
 			w.WriteHeader(422)
 			notifier.AddError("word not in word list")
-			err = routesTemplates.ExecuteTemplate(w, "oob-messages", notifier.ToTemplate())
+			err = templates.Routes.ExecuteTemplate(w, "oob-messages", notifier.ToTemplate())
 			if err != nil {
 				log.Printf("error t.ExecuteTemplate 'oob-messages': %s", err)
 			}
@@ -104,7 +105,7 @@ func PostLettr(sessions *session.Sessions, wdb puzzle.WordDatabase, imprintUrl s
 		fData.IsSolved = p.IsSolved()
 		fData.IsLoose = p.IsLoose()
 
-		err = routesTemplates.ExecuteTemplate(w, "lettr-form", fData)
+		err = templates.Routes.ExecuteTemplate(w, "lettr-form", fData)
 		if err != nil {
 			log.Printf("error t.ExecuteTemplate '/lettr' route: %s", err)
 		}

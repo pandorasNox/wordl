@@ -10,7 +10,7 @@ import (
 
 	"github.com/pandorasNox/lettr/pkg/middleware"
 	"github.com/pandorasNox/lettr/pkg/puzzle"
-	"github.com/pandorasNox/lettr/pkg/routes"
+	"github.com/pandorasNox/lettr/pkg/router/routes"
 	"github.com/pandorasNox/lettr/pkg/session"
 )
 

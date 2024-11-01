@@ -5,7 +5,8 @@ import (
 	"net/http"
 
 	"github.com/pandorasNox/lettr/pkg/puzzle"
-	"github.com/pandorasNox/lettr/pkg/routes/models"
+	"github.com/pandorasNox/lettr/pkg/router/routes/models"
+	"github.com/pandorasNox/lettr/pkg/router/routes/templates"
 	"github.com/pandorasNox/lettr/pkg/session"
 )
 
@@ -22,7 +23,7 @@ func Help(sessions *session.Sessions, wdb puzzle.WordDatabase) http.HandlerFunc 
 			SolutionHasDublicateLetters: g.ActiveSolutionWord().HasDublicateLetters(),
 		}
 
-		err := routesTemplates.ExecuteTemplate(w, "help", td)
+		err := templates.Routes.ExecuteTemplate(w, "help", td)
 		if err != nil {
 			log.Printf("error t.ExecuteTemplate '/help' route: %s", err)
 		}

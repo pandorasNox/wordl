@@ -5,7 +5,7 @@ import (
 
 	"github.com/pandorasNox/lettr/pkg/language"
 	"github.com/pandorasNox/lettr/pkg/puzzle"
-	"github.com/pandorasNox/lettr/pkg/routes/models/shared"
+	"github.com/pandorasNox/lettr/pkg/router/routes/models/shared"
 )
 
 type TemplateDataIndex struct {
