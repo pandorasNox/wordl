@@ -22,9 +22,9 @@ var funcMap = template.FuncMap{
 // log.Printf("template name: %s", routesTemplate.Name())
 var Routes = template.Must(template.New("index.html.tmpl").Funcs(funcMap).ParseFS(
 	templatesFs,
-	"templates/index.html.tmpl",
-	"templates/lettr-form.html.tmpl",
-	"templates/help.html.tmpl",
-	"templates/suggest.html.tmpl",
-	"templates/pages/test.html.tmpl",
+	"index.html.tmpl",
+	"lettr-form.html.tmpl",
+	"help.html.tmpl",
+	"suggest.html.tmpl",
+	"pages/test.html.tmpl",
 ))
