@@ -25,9 +25,10 @@ type WordDatabase struct {
 func (wdb *WordDatabase) Init(fs iofs.FS, filePathsByLanguage map[language.Language]map[WordCollection][]string) error {
 	wdb.Db = make(map[language.Language]map[WordCollection]map[Word]bool)
 
-	for l, collection := range filePathsByLanguage {
+	for l, collectionFilePaths := range filePathsByLanguage {
 		wdb.Db[l] = make(map[WordCollection]map[Word]bool)
-		for c, paths := range collection {
+
+		for c, paths := range collectionFilePaths {
 			wdb.Db[l][c] = make(map[Word]bool)
 
 			for _, path := range paths {
@@ -69,6 +70,10 @@ func (wdb *WordDatabase) Init(fs iofs.FS, filePathsByLanguage map[language.Langu
 					return fmt.Errorf("wordDatabase init failed scanning file with: path='%s', err=%s", path, err)
 				}
 			}
+		}
+
+		for w := range wdb.Db[l][WC_COMMON] {
+			wdb.Db[l][WC_ALL][w] = true
 		}
 	}
 
