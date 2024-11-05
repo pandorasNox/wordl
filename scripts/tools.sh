@@ -85,6 +85,16 @@ func_setup() {
   )
 }
 
+func_gofmt() {(
+  set -Eeuo pipefail;
+
+  echo "🚗 start gofmt";
+
+  find . -name "*.go" | xargs gofmt -l -s -w;
+
+  echo "🏁 done gofmt";
+)}
+
 func_build_img() {
   # handle flags, see https://stackoverflow.com/a/22395652
   while test $# -gt 0 ; do
@@ -206,6 +216,11 @@ else
     if [ $1 == "setup" ]
     then
       func_setup
+    fi
+
+    if [ $1 == "fmt" ]
+    then
+      func_gofmt
     fi
 
     if [ $1 == "watch" ]

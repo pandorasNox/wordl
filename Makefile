@@ -7,6 +7,10 @@ cli:
 setup:
 	./scripts/tools.sh setup
 
+.PHONY: fmt
+fmt:
+	./scripts/tools.sh fmt
+
 .PHONY: watch
 watch:
 	./scripts/tools.sh watch
