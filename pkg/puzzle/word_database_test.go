@@ -3,6 +3,7 @@ package puzzle
 import (
 	iofs "io/fs"
 	"reflect"
+	"strings"
 	"testing"
 	"testing/fstest"
 
@@ -31,10 +32,12 @@ func TestWordDatabase_Init(t *testing.T) {
 		filePathsByLanguage map[language.Language]map[WordCollection][]string
 	}
 	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-		wantWdb WordDatabase
+		name                   string
+		args                   args
+		shouldFsStatFail       bool
+		wantErr                bool
+		wantErrMessageContains string
+		wantWdb                WordDatabase
 	}{
 		// Add test cases.
 		{
@@ -65,7 +68,8 @@ cried
 					},
 				},
 			},
-			wantErr: false,
+			shouldFsStatFail: false,
+			wantErr:          false,
 			wantWdb: WordDatabase{
 				Db: map[language.Language]map[WordCollection]map[Word]bool{
 					language.LANG_EN: {
@@ -110,7 +114,8 @@ gamer
 					},
 				},
 			},
-			wantErr: false,
+			shouldFsStatFail: false,
+			wantErr:          false,
 			wantWdb: WordDatabase{
 				Db: map[language.Language]map[WordCollection]map[Word]bool{
 					language.LANG_EN: {
@@ -129,20 +134,7 @@ gamer
 		{
 			name: "Init can't open files",
 			args: args{
-				fs: fstest.MapFS{
-					"all.txt": {
-						// Data: []byte("hello, world"),
-						Data: []byte(`# metadata
-gamer
-games
-`),
-					},
-					"common.txt": {
-						Data: []byte(`# metadata
-gamer
-`),
-					},
-				},
+				fs: fstest.MapFS{},
 				filePathsByLanguage: map[language.Language]map[WordCollection][]string{
 					language.LANG_EN: {
 						WC_ALL: {
@@ -154,28 +146,64 @@ gamer
 					},
 				},
 			},
-			wantErr: true,
+			shouldFsStatFail:       false,
+			wantErr:                true,
+			wantErrMessageContains: "wordDatabase init failed when opening file",
 			wantWdb: WordDatabase{
 				Db: map[language.Language]map[WordCollection]map[Word]bool{
 					language.LANG_EN: {
-						WC_ALL: {
-							{'g', 'a', 'm', 'e', 's'}: true,
-							{'g', 'a', 'm', 'e', 'r'}: true,
-						},
-						WC_COMMON: {
-							{'g', 'a', 'm', 'e', 'r'}: true,
-						},
+						WC_ALL: {},
 					},
 				},
 			},
 		},
 		//
+		// 		{
+		// 			name: "Init can't get file stat",
+		// 			args: args{
+		// 				fs: fstest.MapFS{
+		// 					"all.txt": {
+		// 						// Data: []byte("hello, world"),
+		// 						Data: []byte(`# metadata
+		// gamer
+		// games
+		// `),
+		// 					},
+		// 					"common.txt": {
+		// 						Data: []byte(`# metadata
+		// gamer
+		// `),
+		// 					},
+		// 				},
+		// 				filePathsByLanguage: map[language.Language]map[WordCollection][]string{
+		// 					language.LANG_EN: {
+		// 						WC_ALL: {
+		// 							"all.txt",
+		// 						},
+		// 						WC_COMMON: {
+		// 							"common.txt",
+		// 						},
+		// 					},
+		// 				},
+		// 			},
+		// 			shouldFsStatFail:       true,
+		// 			wantErr:                true,
+		// 			wantErrMessageContains: "wordDatabase init failed when obtaining stat",
+		// 			wantWdb:                WordDatabase{},
+		// 		},
+		//
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			wdb := WordDatabase{}
-			if err := wdb.Init(tt.args.fs, tt.args.filePathsByLanguage); (err != nil) != tt.wantErr {
+			err := wdb.Init(tt.args.fs, tt.args.filePathsByLanguage)
+			if (err != nil) != tt.wantErr {
 				t.Errorf("WordDatabase.Init() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if err != nil && tt.wantErr && tt.wantErrMessageContains != "" {
+				if !strings.Contains(err.Error(), tt.wantErrMessageContains) {
+					t.Errorf("WordDatabase.Init() error = %v, wantErr %v, wantErrMessageContains %s", err, tt.wantErr, tt.wantErrMessageContains)
+				}
 			}
 			if tt.wantErr == false && !reflect.DeepEqual(wdb, tt.wantWdb) {
 				t.Errorf("WordDatabase.Init() databases not equal, got %v, want %v", wdb, tt.wantWdb)
