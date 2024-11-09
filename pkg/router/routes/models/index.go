@@ -14,8 +14,8 @@ type TemplateDataIndex struct {
 	shared.TemplateDataLettr
 }
 
-func (tdi TemplateDataIndex) New(l language.Language, p puzzle.Puzzle, pastWords []puzzle.Word, imprintUrl string, revision string, faviconPath string) TemplateDataIndex {
-	tdi.TemplateDataLettr = tdi.TemplateDataLettr.New(l, p, pastWords, imprintUrl, revision, faviconPath)
+func (tdi TemplateDataIndex) New(l language.Language, p puzzle.Puzzle, letterHints []rune, pastWords []puzzle.Word, imprintUrl string, revision string, faviconPath string) TemplateDataIndex {
+	tdi.TemplateDataLettr = tdi.TemplateDataLettr.New(l, p, letterHints, pastWords, imprintUrl, revision, faviconPath)
 	tdi.JSCachePurgeTimestamp = time.Now().Unix()
 
 	return tdi

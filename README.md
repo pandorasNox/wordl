@@ -74,4 +74,4 @@
         * [ ] 431 Request Header Fields Too Large (RFC 6585)
     * [ ] improve VS Code dev container
     * [ ] htmx routing ? (keep nav + footer but change body + change url)
-    * [ ] mark suggested word on keyboard (pink letters)
+    * [x] mark suggested word on keyboard (pink letters)

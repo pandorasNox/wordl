@@ -17,9 +17,9 @@ type TemplateDataLettr struct {
 	ImprintUrl  string
 }
 
-func (fd TemplateDataLettr) New(l language.Language, p puzzle.Puzzle, pastWords []puzzle.Word, imprintUrl string, revision string, faviconPath string) TemplateDataLettr {
+func (fd TemplateDataLettr) New(l language.Language, p puzzle.Puzzle, letterHints []rune, pastWords []puzzle.Word, imprintUrl string, revision string, faviconPath string) TemplateDataLettr {
 	kb := Keyboard{}
-	kb.Init(l, p.LetterGuesses())
+	kb.Init(l, p.LetterGuesses(), letterHints)
 
 	return TemplateDataLettr{
 		Data:        p,

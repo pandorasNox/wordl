@@ -28,6 +28,7 @@ func GetLettr(sessions *session.Sessions, wdb puzzle.WordDatabase, imprintUrl st
 		fData := shared.TemplateDataLettr{}.New(
 			s.Language(),
 			p,
+			s.GameState().LetterHints(),
 			s.PastWords(),
 			imprintUrl,
 			revision,
@@ -101,7 +102,7 @@ func PostLettr(sessions *session.Sessions, wdb puzzle.WordDatabase, imprintUrl s
 		s.SetGameState(*g) //todo move gamestate from pointer to copy
 		sessions.UpdateOrSet(s)
 
-		fData := shared.TemplateDataLettr{}.New(s.Language(), p, s.PastWords(), imprintUrl, revision, faviconPath)
+		fData := shared.TemplateDataLettr{}.New(s.Language(), p, s.GameState().LetterHints(), s.PastWords(), imprintUrl, revision, faviconPath)
 		fData.IsSolved = p.IsSolved()
 		fData.IsLoose = p.IsLoose()
 

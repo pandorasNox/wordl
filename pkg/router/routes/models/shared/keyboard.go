@@ -1,39 +1,68 @@
 package shared
 
 import (
+	"slices"
 	"unicode"
 
 	"github.com/pandorasNox/lettr/pkg/language"
 	"github.com/pandorasNox/lettr/pkg/puzzle"
 )
 
+type keyboardKey struct {
+	Key    string
+	IsUsed bool
+	Match  puzzle.Match
+	IsHint bool
+}
+
 type Keyboard struct {
 	KeyGrid [][]keyboardKey
 }
 
-func (k *Keyboard) Init(l language.Language, lgs []puzzle.LetterGuess) {
+func (k *Keyboard) Init(l language.Language, lgs []puzzle.LetterGuess, letterHints []rune) {
 	k.KeyGrid = [][]keyboardKey{
-		{{"Q", false, puzzle.MatchNone}, {"W", false, puzzle.MatchNone}, {"E", false, puzzle.MatchNone}, {"R", false, puzzle.MatchNone}, {"T", false, puzzle.MatchNone}, {"Y", false, puzzle.MatchNone}, {"U", false, puzzle.MatchNone}, {"I", false, puzzle.MatchNone}, {"O", false, puzzle.MatchNone}, {"P", false, puzzle.MatchNone}, {"Delete", false, puzzle.MatchNone}},
-		{{"A", false, puzzle.MatchNone}, {"S", false, puzzle.MatchNone}, {"D", false, puzzle.MatchNone}, {"F", false, puzzle.MatchNone}, {"G", false, puzzle.MatchNone}, {"H", false, puzzle.MatchNone}, {"J", false, puzzle.MatchNone}, {"K", false, puzzle.MatchNone}, {"L", false, puzzle.MatchNone}, {"Enter", false, puzzle.MatchNone}},
-		{{"Z", false, puzzle.MatchNone}, {"X", false, puzzle.MatchNone}, {"C", false, puzzle.MatchNone}, {"V", false, puzzle.MatchNone}, {"B", false, puzzle.MatchNone}, {"N", false, puzzle.MatchNone}, {"M", false, puzzle.MatchNone}},
+		{{"Q", false, puzzle.MatchNone, false}, {"W", false, puzzle.MatchNone, false}, {"E", false, puzzle.MatchNone, false}, {"R", false, puzzle.MatchNone, false}, {"T", false, puzzle.MatchNone, false}, {"Y", false, puzzle.MatchNone, false}, {"U", false, puzzle.MatchNone, false}, {"I", false, puzzle.MatchNone, false}, {"O", false, puzzle.MatchNone, false}, {"P", false, puzzle.MatchNone, false}, {"Delete", false, puzzle.MatchNone, false}},
+		{{"A", false, puzzle.MatchNone, false}, {"S", false, puzzle.MatchNone, false}, {"D", false, puzzle.MatchNone, false}, {"F", false, puzzle.MatchNone, false}, {"G", false, puzzle.MatchNone, false}, {"H", false, puzzle.MatchNone, false}, {"J", false, puzzle.MatchNone, false}, {"K", false, puzzle.MatchNone, false}, {"L", false, puzzle.MatchNone, false}, {"Enter", false, puzzle.MatchNone, false}},
+		{{"Z", false, puzzle.MatchNone, false}, {"X", false, puzzle.MatchNone, false}, {"C", false, puzzle.MatchNone, false}, {"V", false, puzzle.MatchNone, false}, {"B", false, puzzle.MatchNone, false}, {"N", false, puzzle.MatchNone, false}, {"M", false, puzzle.MatchNone, false}},
 	}
 
-	for ri, r := range k.KeyGrid {
-	KeyLoop:
-		for ki, kk := range r {
-			for _, lg := range lgs {
-				if kk.Key == "Enter" || kk.Key == "Delete" {
-					continue KeyLoop
-				}
+	for ri, keyboardRow := range k.KeyGrid {
+		for ki, currentKey := range keyboardRow {
+			// ensure length is one (for to rune conversion, skipping keys like "Enter" or "Delete")
+			if len(currentKey.Key) > 1 {
+				continue
+			}
 
-				KeyR := firstRune(kk.Key)
-				betterMatch := (k.KeyGrid[ri][ki].Match == puzzle.MatchNone) ||
-					(k.KeyGrid[ri][ki].Match == puzzle.MatchVague && lg.Match == puzzle.MatchExact)
+			KeyRune := unicode.ToLower(firstRune(currentKey.Key))
 
-				if lg.Letter == unicode.ToLower(KeyR) && betterMatch {
-					k.KeyGrid[ri][ki].IsUsed = true
-					k.KeyGrid[ri][ki].Match = lg.Match
-				}
+			isExactMatch := slices.ContainsFunc(lgs, func(lg puzzle.LetterGuess) bool {
+				return KeyRune == lg.Letter && lg.Match == puzzle.MatchExact
+			})
+			if isExactMatch {
+				k.KeyGrid[ri][ki].IsUsed = true
+				k.KeyGrid[ri][ki].Match = puzzle.MatchExact
+				continue
+			}
+
+			isVagueMatch := slices.ContainsFunc(lgs, func(lg puzzle.LetterGuess) bool {
+				return KeyRune == lg.Letter && lg.Match == puzzle.MatchVague
+			})
+			if isVagueMatch {
+				k.KeyGrid[ri][ki].IsUsed = true
+				k.KeyGrid[ri][ki].Match = puzzle.MatchVague
+				continue
+			}
+
+			isHint := slices.Contains(letterHints, KeyRune)
+			k.KeyGrid[ri][ki].IsHint = isHint
+
+			isUsed := slices.ContainsFunc(lgs, func(lg puzzle.LetterGuess) bool {
+				return KeyRune == lg.Letter && lg.Match == puzzle.MatchNone
+			})
+			if isUsed {
+				k.KeyGrid[ri][ki].IsUsed = true
+				k.KeyGrid[ri][ki].Match = puzzle.MatchNone
+				continue
 			}
 		}
 	}
@@ -45,10 +74,4 @@ func firstRune(s string) rune {
 	}
 
 	return 0
-}
-
-type keyboardKey struct {
-	Key    string
-	IsUsed bool
-	Match  puzzle.Match
 }

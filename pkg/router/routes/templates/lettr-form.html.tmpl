@@ -127,26 +127,33 @@
             <button
                 onclick="document.dispatchEvent(new KeyboardEvent('keyup',{'key':'{{ $keyboardKey.Key }}'}))"
                 class="
-                    text-xs text-gray-900
+                    text-xs
                     border border-gray-300
                     focus:outline-none hover:bg-gray-200 focus:ring-4 focus:ring-gray-100
                     font-medium
                     rounded-lg
                     px-3.5 py-1.5
-                    dark:text-white dark:border-gray-700 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700
+                    dark:border-gray-700 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700
 
-                    {{ if not $keyboardKey.IsUsed }}
-                    bg-white
-                    dark:bg-gray-800
-                    {{ else if and $keyboardKey.IsUsed (IsMatchNone $keyboardKey.Match) }}
-                    bg-gray-100
-                    dark:bg-gray-600
-                    {{ else if and $keyboardKey.IsUsed (IsMatchExact $keyboardKey.Match) }}
-                    bg-green-400
-                    dark:bg-green-700
-                    {{ else if and $keyboardKey.IsUsed (IsMatchVague $keyboardKey.Match) }}
-                    bg-yellow-200
-                    dark:bg-yellow-700
+                    {{ if $keyboardKey.IsHint }}
+                      text-pink-500
+                    {{ else }}
+                      text-gray-900
+                      dark:text-white
+                    {{ end }}
+
+                    {{ if IsMatchExact $keyboardKey.Match }}
+                      bg-green-400
+                      dark:bg-green-700
+                    {{ else if IsMatchVague $keyboardKey.Match }}
+                      bg-yellow-200
+                      dark:bg-yellow-700
+                    {{ else if $keyboardKey.IsUsed }}
+                      bg-gray-100
+                      dark:bg-gray-600
+                    {{ else }}
+                      bg-white
+                      dark:bg-gray-800
                     {{ end }}
                 "
             >

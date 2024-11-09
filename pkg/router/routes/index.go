@@ -17,7 +17,7 @@ func Index(sessions *session.Sessions, wdb puzzle.WordDatabase, imprintUrl strin
 		p := sess.GameState().LastEvaluatedAttempt()
 		sessions.UpdateOrSet(sess)
 
-		fData := models.TemplateDataIndex{}.New(sess.Language(), p, sess.PastWords(), imprintUrl, revision, faviconPath)
+		fData := models.TemplateDataIndex{}.New(sess.Language(), p, sess.GameState().LetterHints(), sess.PastWords(), imprintUrl, revision, faviconPath)
 		fData.IsSolved = p.IsSolved()
 		fData.IsLoose = p.IsLoose()
 
