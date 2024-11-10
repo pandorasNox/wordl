@@ -52,6 +52,8 @@
     * [x] add imprint/link to imprint
     * [x] fix letter hints is not reset with new game bug
     * [ ] tailwind check build succes (with files)
+    * [ ] os.SIGNAL handling (gracefull server Shutdown)
+    * [ ] add scheduled RemoveExpiredSessions func (go routine in main.go)
 - nice-to-have
     * [x] option for double letter hint
     * [ ] pick word dataset picker
