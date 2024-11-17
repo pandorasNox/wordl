@@ -4,14 +4,14 @@ import "slices"
 
 type message string
 
-type notifier struct {
+type Notifier struct {
 	errorMsgs   []message
 	infoMsgs    []message
 	successMsgs []message
 }
 
-func NewNotifier() notifier {
-	return notifier{}
+func NewNotifier() Notifier {
+	return Notifier{}
 }
 
 type TemplateDataMessages struct {
@@ -20,19 +20,19 @@ type TemplateDataMessages struct {
 	SuccessMsgs []message
 }
 
-func (n *notifier) AddError(msg string) {
+func (n *Notifier) AddError(msg string) {
 	n.errorMsgs = append(n.errorMsgs, message(msg))
 }
 
-func (n *notifier) AddInfo(msg string) {
+func (n *Notifier) AddInfo(msg string) {
 	n.infoMsgs = append(n.infoMsgs, message(msg))
 }
 
-func (n *notifier) AddSuccess(msg string) {
+func (n *Notifier) AddSuccess(msg string) {
 	n.successMsgs = append(n.successMsgs, message(msg))
 }
 
-func (n *notifier) ToTemplate() TemplateDataMessages {
+func (n *Notifier) ToTemplate() TemplateDataMessages {
 	return TemplateDataMessages{
 		slices.Clone(n.errorMsgs),
 		slices.Clone(n.infoMsgs),

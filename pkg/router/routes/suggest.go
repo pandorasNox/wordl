@@ -40,9 +40,15 @@ func PostSuggest(githubToken string) http.HandlerFunc {
 		form := r.PostForm
 		tds := models.TemplateDataSuggest{
 			Word:     form["word"][0],
-			Message:  form["message"][0],
+			Message:  form["123456789"][0],
 			Language: form["language-pick"][0],
 			Action:   form["suggest-action"][0],
+		}
+
+		isHoneypotFilled := len(form["message"][0]) != 0
+		if isHoneypotFilled {
+			createSuccessResponse(w, &notifier)
+			return
 		}
 
 		err = tds.Validate()
@@ -75,15 +81,19 @@ func PostSuggest(githubToken string) http.HandlerFunc {
 			return
 		}
 
-		notifier.AddSuccess("Suggestion send, thank you!")
-		err = templates.Routes.ExecuteTemplate(w, "oob-messages", notifier.ToTemplate())
-		if err != nil {
-			log.Printf("error t.ExecuteTemplate 'oob-messages' route: %s", err)
-		}
+		createSuccessResponse(w, &notifier)
+	}
+}
 
-		err = templates.Routes.ExecuteTemplate(w, "suggest", models.TemplateDataSuggest{})
-		if err != nil {
-			log.Printf("error t.ExecuteTemplate '/suggest' route: %s", err)
-		}
+func createSuccessResponse(w http.ResponseWriter, n *notification.Notifier) {
+	n.AddSuccess("Suggestion send, thank you!")
+	err := templates.Routes.ExecuteTemplate(w, "oob-messages", n.ToTemplate())
+	if err != nil {
+		log.Printf("error t.ExecuteTemplate 'oob-messages' route: %s", err)
+	}
+
+	err = templates.Routes.ExecuteTemplate(w, "suggest", models.TemplateDataSuggest{})
+	if err != nil {
+		log.Printf("error t.ExecuteTemplate '/suggest' route: %s", err)
 	}
 }
