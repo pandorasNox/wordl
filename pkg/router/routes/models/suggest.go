@@ -9,10 +9,11 @@ import (
 )
 
 type TemplateDataSuggest struct {
-	Word     string
-	Message  string
-	Language string
-	Action   string
+	Word                             string
+	Message                          string
+	Language                         string
+	Action                           string
+	SecurityHoneypotMessageInputName string
 }
 
 var RegexpAllowedWordCharacters = regexp.MustCompile(`^[A-Za-zöäüÖÄÜß]{5}$`)

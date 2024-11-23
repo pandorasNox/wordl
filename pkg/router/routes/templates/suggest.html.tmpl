@@ -79,12 +79,12 @@
   </fieldset>
 
   <div class="mb-5">
-    <label for="123456789" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Your message:</label>
+    <label for="{{ .SecurityHoneypotMessageInputName }}" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Your message:</label>
     <textarea id="message" name="message" rows="8"
       autocomplete="new-password"
       class="bg-white dark:bg-gray-900 p-0 absolute h-[1px] w-[1px] truncate resize-none"
     ></textarea>
-    <textarea id="123456789" name="123456789" rows="8"
+    <textarea id="{{ .SecurityHoneypotMessageInputName }}" name="{{ .SecurityHoneypotMessageInputName }}" rows="8"
       class="block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
       placeholder="Leave a comment... (reason why, meaning of the word, other related infos/remarks... MAX 280 characters allowed)"
       required maxlength="280"

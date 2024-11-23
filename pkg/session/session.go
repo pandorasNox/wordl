@@ -1,6 +1,9 @@
 package session
 
 import (
+	"fmt"
+	"log"
+	"math/rand"
 	"net/http"
 	"slices"
 	"time"
@@ -17,12 +20,13 @@ const SESSION_MAX_AGE_IN_SECONDS = 24 * 60 * 60
 
 type session struct {
 	// todo: think about using mutex or channel for rw session
-	id            string
-	expiresAt     time.Time
-	maxAgeSeconds int
-	language      language.Language
-	gameState     puzzle.GameState
-	pastWords     []puzzle.Word
+	id                               string
+	expiresAt                        time.Time
+	maxAgeSeconds                    int
+	language                         language.Language
+	gameState                        puzzle.GameState
+	pastWords                        []puzzle.Word
+	securityHoneypotMessageInputName string
 }
 
 func (s *session) AddPastWord(w puzzle.Word) {
@@ -51,6 +55,32 @@ func (s *session) GameState() *puzzle.GameState {
 
 func (s *session) SetGameState(g puzzle.GameState) {
 	s.gameState = g
+}
+
+func (s *session) SecurityHoneypotMessageInputName() string {
+	return s.securityHoneypotMessageInputName
+}
+
+func (s *session) NewSecurityHoneypotMessageInputName() {
+	name, err := randomString(42)
+	if err != nil {
+		log.Printf("NewSecurityHoneypotMessageInputName: failed generating random string: %s", err)
+		name = "123456789"
+	}
+
+	s.securityHoneypotMessageInputName = name
+}
+
+func randomString(length int) (string, error) {
+	b := make([]byte, length+2)
+	randsource := rand.NewSource(time.Now().UnixNano())
+	randgenerator := rand.New(randsource)
+	_, err := randgenerator.Read(b)
+	if err != nil {
+		return "", fmt.Errorf("randomString: read from rand failed: %s", err)
+	}
+
+	return fmt.Sprintf("%x", b)[2 : length+2], nil
 }
 
 func HandleSession(w http.ResponseWriter, req *http.Request, sessions *Sessions, wdb puzzle.WordDatabase) session {
@@ -110,7 +140,7 @@ func generateSession(lang language.Language, wdb puzzle.WordDatabase) session { 
 	id := uuid.NewString()
 	expiresAt := generateSessionLifetime()
 
-	return session{id, expiresAt, SESSION_MAX_AGE_IN_SECONDS, lang, puzzle.NewGame(lang, wdb, []puzzle.Word{}), []puzzle.Word{}}
+	return session{id, expiresAt, SESSION_MAX_AGE_IN_SECONDS, lang, puzzle.NewGame(lang, wdb, []puzzle.Word{}), []puzzle.Word{}, ""}
 }
 
 func generateSessionLifetime() time.Time {
