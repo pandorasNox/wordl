@@ -102,7 +102,7 @@ func ConstructCookie(s session) http.Cookie {
 		MaxAge:   s.maxAgeSeconds,
 		HttpOnly: true,
 		Secure:   true,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: http.SameSiteStrictMode,
 	}
 }
 
