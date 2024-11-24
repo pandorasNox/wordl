@@ -37,7 +37,7 @@ func Test_ConstructCookie(t *testing.T) {
 				MaxAge:   SESSION_MAX_AGE_IN_SECONDS,
 				HttpOnly: true,
 				Secure:   true,
-				SameSite: http.SameSiteLaxMode,
+				SameSite: http.SameSiteStrictMode,
 			},
 		},
 	}
