@@ -7,22 +7,31 @@ import (
 
 	"github.com/pandorasNox/lettr/pkg/github"
 	"github.com/pandorasNox/lettr/pkg/notification"
+	"github.com/pandorasNox/lettr/pkg/puzzle"
 	"github.com/pandorasNox/lettr/pkg/router/routes/models"
 	"github.com/pandorasNox/lettr/pkg/router/routes/templates"
+	"github.com/pandorasNox/lettr/pkg/session"
 )
 
-func GetSuggest() http.HandlerFunc {
+func GetSuggest(sessions *session.Sessions, wdb puzzle.WordDatabase) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		err := templates.Routes.ExecuteTemplate(w, "suggest", models.TemplateDataSuggest{})
+		s := session.HandleSession(w, r, sessions, wdb)
+		s.NewSecurityHoneypotMessageInputName()
+		sessions.UpdateOrSet(s)
+
+		err := templates.Routes.ExecuteTemplate(w, "suggest", models.TemplateDataSuggest{
+			SecurityHoneypotMessageInputName: s.SecurityHoneypotMessageInputName(),
+		})
 		if err != nil {
 			log.Printf("error t.ExecuteTemplate '/suggest' route: %s", err)
 		}
 	}
 }
 
-func PostSuggest(githubToken string) http.HandlerFunc {
+func PostSuggest(githubToken string, sessions *session.Sessions, wdb puzzle.WordDatabase) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		notifier := notification.NewNotifier()
+		s := session.HandleSession(w, r, sessions, wdb)
 
 		err := r.ParseForm()
 		if err != nil {
@@ -38,14 +47,15 @@ func PostSuggest(githubToken string) http.HandlerFunc {
 		}
 
 		form := r.PostForm
+
 		tds := models.TemplateDataSuggest{
-			Word:     form["word"][0],
-			Message:  form["123456789"][0],
-			Language: form["language-pick"][0],
-			Action:   form["suggest-action"][0],
+			Word:     form.Get("word"),
+			Message:  form.Get(s.SecurityHoneypotMessageInputName()),
+			Language: form.Get("language-pick"),
+			Action:   form.Get("suggest-action"),
 		}
 
-		isHoneypotFilled := len(form["message"][0]) != 0
+		isHoneypotFilled := form.Get("message") != ""
 		if isHoneypotFilled {
 			createSuccessResponse(w, &notifier)
 			return

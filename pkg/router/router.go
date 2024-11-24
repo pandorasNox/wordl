@@ -33,8 +33,8 @@ func addRoutes(mux *http.ServeMux, staticFS iofs.FS, sessions *session.Sessions,
 	mux.HandleFunc("POST /lettr", routes.PostLettr(sessions, wordDb, imprintUrl, revision, faviconPath))
 	mux.HandleFunc("POST /new", routes.PostNew(sessions, wordDb, imprintUrl, revision, faviconPath))
 	mux.HandleFunc("POST /help", routes.Help(sessions, wordDb))
-	mux.HandleFunc("GET /suggest", routes.GetSuggest())
-	mux.HandleFunc("POST /suggest", routes.PostSuggest(githubToken))
+	mux.HandleFunc("GET /suggest", routes.GetSuggest(sessions, wordDb))
+	mux.HandleFunc("POST /suggest", routes.PostSuggest(githubToken, sessions, wordDb))
 
 	return mux
 }
