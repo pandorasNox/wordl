@@ -1,15 +1,17 @@
 package routes
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/pandorasNox/lettr/pkg/router/routes/templates"
+	"github.com/pandorasNox/lettr/pkg/server"
 )
 
 type TemplateDataTestPage struct{}
 
-func TestPage() func(w http.ResponseWriter, req *http.Request) {
+func GetTestPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		tpDate := TemplateDataTestPage{}
 
@@ -17,5 +19,15 @@ func TestPage() func(w http.ResponseWriter, req *http.Request) {
 		if err != nil {
 			log.Printf("error t.Execute '/' route: %s", err)
 		}
+	}
+}
+
+func PostIncrementHoneyTrapped(s *server.Server) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		before := s.Metrics().HoneyTrapped()
+		s.Metrics().IncreaseHoneyTrapped()
+		after := s.Metrics().HoneyTrapped()
+
+		fmt.Fprintf(w, "before='%d'\nafter='%d'\ndone\n", before, after)
 	}
 }

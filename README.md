@@ -51,11 +51,13 @@
         * [x] formatting
     * [x] add imprint/link to imprint
     * [x] fix letter hints is not reset with new game bug
+    * [x] add metrics endpoint
     * [ ] tailwind check build succes (with files)
     * [ ] os.SIGNAL handling (gracefull server Shutdown)
     * [ ] add scheduled RemoveExpiredSessions func (go routine in main.go)
 - nice-to-have
     * [x] option for double letter hint
+    * [ ] Circuit Breaker Support
     * [ ] pick word dataset picker
     * [ ] get definition (e.g. wikitionary)
         * options:
