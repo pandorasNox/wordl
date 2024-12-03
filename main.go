@@ -10,6 +10,7 @@ import (
 
 	"github.com/pandorasNox/lettr/pkg/puzzle"
 	"github.com/pandorasNox/lettr/pkg/router"
+	"github.com/pandorasNox/lettr/pkg/server"
 	"github.com/pandorasNox/lettr/pkg/session"
 )
 
@@ -46,6 +47,7 @@ func main() {
 	log.Println("staring server...")
 
 	envCfg := envConfig()
+	server := server.Server{}
 	sessions := session.NewSessions()
 
 	wordDb := puzzle.WordDatabase{}
@@ -61,7 +63,7 @@ func main() {
 		log.Fatalf("subtree for 'static' dir of embed fs failed: %s", err) //TODO
 	}
 
-	router := router.New(staticFS, &sessions, wordDb, envCfg.imprintUrl, envCfg.githubToken, Revision, FaviconPath)
+	router := router.New(staticFS, &server, &sessions, wordDb, envCfg.imprintUrl, envCfg.githubToken, Revision, FaviconPath)
 
 	// v1 := http.NewServeMux()
 	// v1.Handle("/v1/", http.StripPrefix("/v1", muxWithMiddlewares))
